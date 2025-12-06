@@ -1,5 +1,5 @@
 import { randomUUID } from "crypto";
-import { createClient, RedisClientType } from "redis";
+import { createClient } from "redis";
 
 export type EventKind = "system" | "combat" | "chat" | "loot" | "move" | "info";
 
@@ -127,7 +127,8 @@ type GameStore = {
 export const INVENTORY_LIMIT = 12;
 const REDIS_URL = process.env.REDIS_URL;
 const REDIS_KEY = "mud:store:v1";
-let redisClient: RedisClientType | null = null;
+type RedisInstance = ReturnType<typeof createClient> | null;
+let redisClient: RedisInstance = null;
 let redisLoaded = false;
 
 const MONSTER_AFFINITY: Record<string, Affinity> = {
