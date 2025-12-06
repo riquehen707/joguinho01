@@ -608,7 +608,6 @@ const AWAKENED_EFFECTS: AwakenedEffect[] = [
   },
 ];
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const getAwakenedBonus = (player: PlayerRecord): { dmg: number; crit: number; text?: string } => {
   if (!player.affinityKnown) return { dmg: 0, crit: 0 };
   for (const effect of AWAKENED_EFFECTS) {
@@ -1195,6 +1194,7 @@ const attack = (
   const buffMight = player.statusEffects
     .filter((s) => s.kind === "buff" && s.stat === "might")
     .reduce((acc, s) => acc + s.magnitude, 0);
+  const awakened = getAwakenedBonus(player);
 
   const hitChance = Math.max(
     35,
