@@ -1189,6 +1189,13 @@ const attack = (
     return;
   }
 
+  const buffPrecision = player.statusEffects
+    .filter((s) => s.kind === "buff" && s.stat === "precision")
+    .reduce((acc, s) => acc + s.magnitude, 0);
+  const buffMight = player.statusEffects
+    .filter((s) => s.kind === "buff" && s.stat === "might")
+    .reduce((acc, s) => acc + s.magnitude, 0);
+
   const hitChance = Math.max(
     35,
     Math.min(
