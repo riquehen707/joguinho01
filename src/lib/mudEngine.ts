@@ -1399,7 +1399,7 @@ export const joinPlayer = async (
   preferredId?: string,
   originId?: OriginId,
   tendency?: Tendency,
-): GameSnapshot => {
+): Promise<GameSnapshot> => {
   const store = await getStore();
   cleanupIdle(store);
 
