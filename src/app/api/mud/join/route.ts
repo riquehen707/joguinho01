@@ -21,6 +21,6 @@ export async function POST(request: Request) {
       ? await loginOrCreate(email, password, name, originId, tendency)
       : await joinPlayer(name, playerId, originId, tendency);
 
-  const status = snapshot.error ? 400 : 200;
+  const status = "error" in snapshot && snapshot.error ? 400 : 200;
   return NextResponse.json(snapshot, { status });
 }
