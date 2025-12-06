@@ -231,6 +231,22 @@ export default function Home() {
     [applySnapshot, originId, tendency],
   );
 
+  const handleLogout = useCallback(() => {
+    try {
+      window.localStorage.removeItem("mud-player");
+    } catch {
+      // ignore
+    }
+    setPlayerId(null);
+    setPlayer(null);
+    setRoom(null);
+    setScoreboard([]);
+    setLog([]);
+    setStatus(null);
+    setStep(0);
+    setCommand("");
+  }, []);
+
   useEffect(() => {
     if (mountedRef.current) return;
     mountedRef.current = true;
@@ -372,15 +388,24 @@ export default function Home() {
             </p>
           </div>
 
-          <div className="flex flex-col gap-2 text-sm lg:items-end">
-            <div className="flex items-center gap-3">
-              <span
-                className={`h-3 w-3 rounded-full ${connected ? "bg-emerald-400 animate-pulse" : "bg-slate-500"}`}
-              />
-              <span className="text-slate-200">
-                {connected ? `Conectado como ${player?.name ?? "?"}` : "Aguardando conexão"}
-              </span>
-            </div>
+            <div className="flex flex-col gap-2 text-sm lg:items-end">
+              <div className="flex items-center gap-3">
+                <span
+                  className={`h-3 w-3 rounded-full ${connected ? "bg-emerald-400 animate-pulse" : "bg-slate-500"}`}
+                />
+                <span className="text-slate-200">
+                  {connected ? `Conectado como ${player?.name ?? "?"}` : "Aguardando conexão"}
+                </span>
+                {connected && (
+                  <button
+                    type="button"
+                    onClick={handleLogout}
+                    className="rounded-full border border-rose-400/60 bg-rose-500/10 px-3 py-1 text-xs text-rose-100 hover:border-rose-300 transition"
+                  >
+                    Sair
+                  </button>
+                )}
+              </div>
             {player && (
               <div className="flex flex-wrap justify-end gap-2 text-[12px] text-emerald-100">
                 <span className="rounded-full border border-emerald-500/40 bg-emerald-500/10 px-3 py-1">
