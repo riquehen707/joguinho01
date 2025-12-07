@@ -2,8 +2,14 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #0b1021;
+  --foreground: #e2e8f0;
+  --panel-bg: #0f172a;
+  --panel-border: #1e293b;
+  --text-dim: #94a3b8;
+  --accent-emerald: #34d399;
+  --accent-indigo: #818cf8;
+  --radius: 12px;
 }
 
 @theme inline {
@@ -26,9 +32,41 @@ body {
     #0b1021;
   color: var(--foreground);
   font-family: "JetBrains Mono", var(--font-geist-sans), system-ui, -apple-system, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   background-size: 100% 100%, 100% 100%, 100% 100%;
+}
+
+pre,
+code,
+.font-mono {
+  font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  font-variant-ligatures: none;
+}
+
+* {
+  scrollbar-color: #334155 #0b1021;
+  scrollbar-width: thin;
+}
+
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+*::-webkit-scrollbar-track {
+  background: #0b1021;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: #334155;
+  border-radius: 999px;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: #475569;
 }
 
 .scanline::before {

@@ -1,121 +1,24 @@
 import { randomUUID } from "crypto";
 import { createClient } from "redis";
+import {
+  baseRooms,
+  COMMON_LOOT,
+  MONSTER_AFFINITY,
+  MONSTER_TAGS,
+  SKILL_TAG_UNLOCKS,
+  OriginId,
+  Tendency,
+  Formation,
+  RoomTemplate,
+  MonsterTemplate,
+  SKILLS,
+  SKILL_DROPS,
+  SkillDef,
+} from "./worldData";
+import { buildWorldTemplates } from "./mapGen";
+import { Affinity, AttributeSet, EventKind, GameEvent, GameSnapshot, PlayerRecord, PlayerView, Room, RoomView, ScoreEntry, WorldRoomView, OriginDef, Monster } from "./types";
 
-export type EventKind = "system" | "combat" | "chat" | "loot" | "move" | "info";
-
-export type GameEvent = {
-  id: string;
-  text: string;
-  ts: number;
-  type: EventKind;
-  roomId?: string;
-};
-
-type Monster = {
-  name: string;
-  hp: number;
-  maxHp: number;
-  attack: number;
-  reward: number;
-};
-
-type Room = {
-  id: string;
-  name: string;
-  description: string;
-  exits: Record<string, string>;
-  items: string[];
-  monster?: Monster;
-};
-
-export type OriginId = "arcana" | "nocturna" | "forja" | "mitica";
-export type Tendency = "precisao" | "agilidade" | "forca" | "vontade" | "defesa";
-
-type AttributeSet = {
-  precision: number;
-  agility: number;
-  might: number;
-  will: number;
-  defense: number;
-  resistance: number;
-  recovery: number;
-  crit: number;
-};
-
-type Affinity = {
-  id: string;
-  name: string;
-  originId: OriginId;
-};
-
-type OriginDef = {
-  id: OriginId;
-  name: string;
-  description: string;
-  affinities: Affinity[];
-  ranges: Record<keyof AttributeSet, [number, number]>;
-};
-
-type PlayerRecord = {
-  id: string;
-  name: string;
-  roomId: string;
-  hp: number;
-  maxHp: number;
-  energy: number;
-  maxEnergy: number;
-  score: number;
-  gold: number;
-  inventory: string[];
-  lastActive: number;
-  isAlive: boolean;
-  origin: OriginDef;
-  tendency?: Tendency;
-  affinity: Affinity;
-  attributes: AttributeSet;
-  affinityKnown: boolean;
-  statusEffects: StatusEffect[];
-};
-
-export type PlayerView = {
-  id: string;
-  name: string;
-  roomId: string;
-  hp: number;
-  maxHp: number;
-  energy: number;
-  maxEnergy: number;
-  score: number;
-  gold: number;
-  inventory: string[];
-  inventoryLimit: number;
-  isAlive: boolean;
-  origin: { id: OriginId; name: string; description: string };
-  tendency?: Tendency;
-  affinityKnown: boolean;
-  attributes: AttributeSet;
-  statusEffects: StatusEffect[];
-};
-
-export type RoomView = {
-  id: string;
-  name: string;
-  description: string;
-  exits: { direction: string; to: string }[];
-  items: string[];
-  monster?: { name: string; hp: number; maxHp: number };
-  occupants: { id: string; name: string }[];
-};
-
-export type ScoreEntry = { id: string; name: string; score: number };
-
-export type GameSnapshot = {
-  player: PlayerView;
-  room: RoomView;
-  scoreboard: ScoreEntry[];
-  events: GameEvent[];
-  now: number;
-};
+export type { OriginId, Tendency, Formation } from "./worldData";
 
 type GameStore = {
   rooms: Record<string, Room>;
@@ -126,28 +29,11 @@ type GameStore = {
 
 export const INVENTORY_LIMIT = 12;
 const REDIS_URL = process.env.REDIS_URL;
-const REDIS_KEY = "mud:store:v1";
+// bump para regenerar mundo procedural (mais salas)
+const REDIS_KEY = "mud:store:v5";
 type RedisInstance = ReturnType<typeof createClient> | null;
 let redisClient: RedisInstance = null;
 let redisLoaded = false;
-
-const MONSTER_AFFINITY: Record<string, Affinity> = {
-  "Lobo Sombrio": { id: "feral", name: "Feral", originId: "nocturna" },
-  "Arquivista Rúnico": { id: "sombra", name: "Sombra", originId: "arcana" },
-  "Capataz de Ferro": { id: "engrenagem", name: "Engrenagem", originId: "forja" },
-  "Corsário das Profundezas": { id: "mar", name: "Mar/Mares", originId: "mitica" },
-  "Golem de Estilhaços": { id: "pressao", name: "Pressao/Calor", originId: "forja" },
-  "Eco Primordial": { id: "destino", name: "Destino/Marca", originId: "mitica" },
-};
-
-const COMMON_LOOT: Record<string, string[]> = {
-  "Lobo Sombrio": ["pelagem rija", "presa trincada"],
-  "Arquivista Rúnico": ["tomo partido", "tinta esmaecida"],
-  "Capataz de Ferro": ["placa enferrujada", "rebite pesado"],
-  "Corsário das Profundezas": ["arpão curto", "gabarito de corda"],
-  "Golem de Estilhaços": ["estilhaço cintilante", "areia cristalizada"],
-  "Eco Primordial": ["fragmento de eco", "lente rachada"],
-};
 
 type StatusEffect = {
   id: string;
@@ -167,8 +53,79 @@ type AwakenedEffect = {
   text: string;
 };
 
+const initSkills = () => ({
+  skillsKnown: [] as string[],
+  skillBar: [] as string[], // ativas equipadas
+  passiveBar: [] as string[],
+  skillCooldowns: {} as Record<string, number>,
+});
+
 const INACTIVITY_TIMEOUT = 1000 * 60 * 15;
 const LOG_LIMIT = 200;
+const WORLD_SEED = process.env.WORLD_SEED || "frag-world";
+const WORLD_TEMPLATES = buildWorldTemplates(baseRooms, WORLD_SEED, 99);
+const MONSTER_POOLS: Record<string, MonsterTemplate[]> = WORLD_TEMPLATES.reduce((acc, tpl) => {
+  if (!tpl.biome) return acc;
+  acc[tpl.biome] = acc[tpl.biome] || [];
+  acc[tpl.biome].push(...tpl.monsters);
+  return acc;
+}, {} as Record<string, MonsterTemplate[]>);
+const DEFAULT_POOL: MonsterTemplate[] = WORLD_TEMPLATES.flatMap((tpl) => tpl.monsters);
+const ACTIVE_SKILL_SLOTS = 2;
+const PASSIVE_SKILL_SLOTS = 2;
+const STARTER_SKILLS = ["basic-strike", "quick-shot"];
+
+const ensureTagProgress = (player: PlayerRecord) => {
+  if (!player.tagProgress) {
+    player.tagProgress = {};
+  }
+};
+
+const awardTagProgress = (
+  player: PlayerRecord,
+  tags: string[],
+  localEvents: GameEvent[],
+) => {
+  if (!tags || tags.length === 0) return;
+  if (!player.tagProgress) player.tagProgress = {};
+  const unlocked: string[] = [];
+  for (const tag of tags) {
+    player.tagProgress[tag] = (player.tagProgress[tag] ?? 0) + 1;
+    const unlocks = SKILL_TAG_UNLOCKS[tag];
+    if (!unlocks) continue;
+    for (const unlock of unlocks) {
+      const knows = player.skillsKnown?.includes(unlock.skillId);
+      if (!knows && player.tagProgress[tag] >= unlock.threshold) {
+        player.skillsKnown = player.skillsKnown || [];
+        player.skillsKnown.push(unlock.skillId);
+        if ((player.skillBar?.length ?? 0) < ACTIVE_SKILL_SLOTS) {
+          player.skillBar = player.skillBar || [];
+          player.skillBar.push(unlock.skillId);
+        }
+        unlocked.push(unlock.skillId);
+      }
+    }
+  }
+  if (unlocked.length) {
+    localEvents.push({
+      id: randomUUID(),
+      text: `${player.name} desbloqueou: ${unlocked.join(", ")}.`,
+      ts: Date.now(),
+      type: "info",
+    });
+  }
+};
+
+const FORMATION_MODS: Record<
+  Formation,
+  { hit: number; crit: number; mitigation: number; dmg: number; label: string }
+> = {
+  vanguarda: { hit: -3, crit: 0, mitigation: 0.2, dmg: 0, label: "Vanguarda" },
+  retaguarda: { hit: 5, crit: 5, mitigation: -0.1, dmg: 0.05, label: "Retaguarda" },
+  furtivo: { hit: 3, crit: 10, mitigation: -0.05, dmg: 0.08, label: "Furtivo/Flanco" },
+  sentinela: { hit: -6, crit: -4, mitigation: 0.35, dmg: -0.05, label: "Sentinela/Guardião" },
+  artilharia: { hit: 8, crit: 8, mitigation: -0.2, dmg: 0.12, label: "Artilharia/Longo alcance" },
+};
 
 const ORIGINS: OriginDef[] = [
   {
@@ -261,104 +218,15 @@ const ORIGINS: OriginDef[] = [
   },
 ];
 
-const baseRooms: Room[] = [
-  {
-    id: "praca",
-    name: "Praça Central",
-    description:
-      "Fogos azuis pairam sobre um círculo de pedra. A praça conecta todas as outras zonas da arena.",
-    exits: { norte: "floresta", leste: "torre", sul: "mina", oeste: "porto" },
-    items: ["moeda de bronze", "pequena runa"],
-  },
-  {
-    id: "floresta",
-    name: "Floresta Nebulosa",
-    description:
-      "Troncos retorcidos escondem olhos atentos. As trilhas levam aventureiros a caçadas rápidas.",
-    exits: { sul: "praca", leste: "cratera" },
-    items: ["erva curativa", "flecha envenenada"],
-    monster: {
-      name: "Lobo Sombrio",
-      hp: 35,
-      maxHp: 35,
-      attack: 8,
-      reward: 20,
-    },
-  },
-  {
-    id: "torre",
-    name: "Torre Prismática",
-    description:
-      "Espelhos quebrados refletem ecos de magia antiga. Os corredores brilham em cores frias.",
-    exits: { oeste: "praca", sul: "cratera" },
-    items: ["pergaminho de faísca", "fragmento de vidro"],
-    monster: {
-      name: "Arquivista Rúnico",
-      hp: 42,
-      maxHp: 42,
-      attack: 9,
-      reward: 24,
-    },
-  },
-  {
-    id: "mina",
-    name: "Mina Abandonada",
-    description: "Ar cheira a ferrugem e ozônio. Trilhos quebrados levam a recantos instáveis.",
-    exits: { norte: "praca", leste: "caverna" },
-    items: ["barril de pólvora", "tocha curta"],
-    monster: {
-      name: "Capataz de Ferro",
-      hp: 40,
-      maxHp: 40,
-      attack: 10,
-      reward: 26,
-    },
-  },
-  {
-    id: "porto",
-    name: "Porto Enguiçado",
-    description:
-      "Navios fantasmas flutuam presos a correntes douradas. As tábuas rangem denunciando presenças.",
-    exits: { leste: "praca", norte: "caverna" },
-    items: ["anzol amaldiçoado", "corda reforçada"],
-    monster: {
-      name: "Corsário das Profundezas",
-      hp: 45,
-      maxHp: 45,
-      attack: 10,
-      reward: 28,
-    },
-  },
-  {
-    id: "cratera",
-    name: "Cratera de Estilhaços",
-    description:
-      "Cristais quebrados pairam no ar. A gravidade falha e faz passos leves virarem saltos longos.",
-    exits: { oeste: "floresta", norte: "torre", sul: "caverna" },
-    items: ["núcleo instável", "pedaço de meteoro"],
-    monster: {
-      name: "Golem de Estilhaços",
-      hp: 55,
-      maxHp: 55,
-      attack: 11,
-      reward: 32,
-    },
-  },
-  {
-    id: "caverna",
-    name: "Caverna de Ecos",
-    description: "Sussurros repetem falas que você ainda não disse. Ecos guiam (ou enganam).",
-    exits: { norte: "cratera", leste: "praca", sul: "porto", oeste: "mina" },
-    items: ["poção de vigor", "talismã rachado"],
-    monster: {
-      name: "Eco Primordial",
-      hp: 60,
-      maxHp: 60,
-      attack: 12,
-      reward: 35,
-    },
-  },
-];
+const makeMonster = (name: string, hp: number, attack: number, reward: number, tags?: string[]): Monster => ({
+  id: randomUUID(),
+  name,
+  hp,
+  maxHp: hp,
+  attack,
+  reward,
+  tags,
+});
 
 const connectRedis = async () => {
   if (!REDIS_URL) return null;
@@ -369,35 +237,67 @@ const connectRedis = async () => {
   return client;
 };
 
-const bootstrapMemoryStore = (): GameStore => {
-  const rooms: Record<string, Room> = {};
-  for (const room of baseRooms) {
-    rooms[room.id] = { ...room, exits: { ...room.exits }, items: [...room.items] };
+const makeMonsterFromTemplate = (tpl: MonsterTemplate): Monster => ({
+  id: randomUUID(),
+  name: tpl.name,
+  hp: tpl.hp,
+  maxHp: tpl.hp,
+  attack: tpl.attack,
+  reward: tpl.reward,
+  tags: tpl.tags,
+});
+
+const buildCostForRoom = (tpl: RoomTemplate | Room) => {
+  if (!tpl.claimable) return undefined;
+  const danger = tpl.danger ?? 1;
+  const items: string[] = [];
+  if (danger >= 2) items.push("gabarito de corda");
+  if (danger >= 3) items.push("rebite pesado");
+  if (tpl.siteType === "ruina" || tpl.siteType === "fenda") {
+    items.push("pequena runa");
   }
-  return {
-    rooms,
-    players: {},
-    accounts: {},
-    log: [],
-  };
+  const gold = Math.max(5, 4 + danger * 3);
+  const uniqueItems = items.length ? Array.from(new Set(items)) : undefined;
+  return { gold, items: uniqueItems };
 };
+
+const hydrateRooms = (templates: RoomTemplate[], saved?: Record<string, Room>): Record<string, Room> => {
+  const rooms: Record<string, Room> = {};
+  for (const tpl of templates) {
+    const savedRoom = saved?.[tpl.id];
+    const buildCost = savedRoom?.buildCost ?? (tpl.claimable ? buildCostForRoom(tpl) : undefined);
+    rooms[tpl.id] = {
+      id: tpl.id,
+      name: tpl.name,
+      description: tpl.description,
+      exits: { ...(savedRoom?.exits ?? tpl.exits) },
+      items: [...(savedRoom?.items ?? tpl.items)],
+      monsters: (savedRoom?.monsters ?? tpl.monsters.map((m) => makeMonsterFromTemplate(m))).map((m) => ({ ...m })),
+      biome: savedRoom?.biome ?? tpl.biome,
+      danger: savedRoom?.danger ?? tpl.danger,
+      siteType: savedRoom?.siteType ?? tpl.siteType,
+      claimable: savedRoom?.claimable ?? tpl.claimable ?? true,
+      ownerId: savedRoom?.ownerId,
+      vault: savedRoom?.vault ? [...savedRoom.vault] : [],
+      vaultSize: savedRoom?.vaultSize ?? tpl.vaultSize ?? 0,
+      buildCost,
+    };
+  }
+  return rooms;
+};
+
+const bootstrapMemoryStore = (): GameStore => ({
+  rooms: hydrateRooms(WORLD_TEMPLATES),
+  players: {},
+  accounts: {},
+  log: [],
+});
 
 const deserializeStore = (data: string | null): GameStore => {
   if (!data) return bootstrapMemoryStore();
   try {
     const parsed = JSON.parse(data) as GameStore;
-    // rebuild rooms items/monsters if needed
-    const rooms: Record<string, Room> = {};
-    for (const room of baseRooms) {
-      const saved = parsed.rooms?.[room.id];
-      rooms[room.id] = {
-        ...room,
-        ...(saved ?? {}),
-        exits: { ...(saved?.exits ?? room.exits) },
-        items: [...(saved?.items ?? room.items)],
-        monster: saved?.monster ? { ...saved.monster } : room.monster ? { ...room.monster } : undefined,
-      };
-    }
+    const rooms = hydrateRooms(WORLD_TEMPLATES, parsed.rooms);
     return {
       rooms,
       players: parsed.players ?? {},
@@ -522,6 +422,156 @@ const addStatus = (player: PlayerRecord, effect: Omit<StatusEffect, "id">, local
     text: `${effect.name} ativo por ${effect.duration} turnos.`,
     ts: Date.now(),
     type: effect.kind === "buff" ? "system" : "combat",
+  });
+};
+
+const ensureVault = (room: Room) => {
+  if (!room.vault) room.vault = [];
+  if (!room.vaultSize) room.vaultSize = 0;
+  return room.vault;
+};
+
+const spawnMonstersForRoom = (room: Room) => {
+  if (room.ownerId) return; // não spawnar dentro de base dominada pelo dono
+  const pool = (room.biome && MONSTER_POOLS[room.biome]) || DEFAULT_POOL;
+  if (!pool || pool.length === 0) return;
+  const danger = Math.max(1, room.danger ?? 1);
+  const maxCount = Math.min(20, 2 + danger * 3);
+  const count = Math.max(1, roll(1, maxCount));
+  room.monsters = Array.from({ length: count }).map(() => makeMonsterFromTemplate(pool[roll(0, pool.length - 1)]));
+};
+
+const skillById = (id: string) => SKILLS.find((s) => s.id === id);
+const skillByName = (name: string) =>
+  SKILLS.find((s) => normalizeText(s.name) === normalizeText(name) || normalizeText(s.id) === normalizeText(name));
+
+const getPassiveBonus = (player: PlayerRecord) => {
+  const equipped = player.passiveBar ?? [];
+  let precision = 0;
+  let crit = 0;
+  for (const id of equipped) {
+    const skill = skillById(id);
+    if (!skill || skill.kind !== "passive") continue;
+    if (skill.id === "echo-veil") {
+      precision += 2;
+      crit += 5;
+    }
+  }
+  return { precision, crit };
+};
+
+const tickCooldowns = (player: PlayerRecord) => {
+  if (!player.skillCooldowns) player.skillCooldowns = {};
+  for (const [key, val] of Object.entries(player.skillCooldowns)) {
+    if (val > 0) player.skillCooldowns[key] = Math.max(0, val - 1);
+  }
+};
+
+const equipSkillCommand = (player: PlayerRecord, arg: string, localEvents: GameEvent[]) => {
+  const [idRaw] = arg.trim().split(/\s+/);
+  if (!idRaw) {
+    localEvents.push({
+      id: randomUUID(),
+      text: "Use: skill equip <id> (ativa) ou skill equip <id> (passiva). Slots limitados.",
+      ts: Date.now(),
+      type: "info",
+    });
+    return;
+  }
+  const skill = skillById(idRaw) ?? skillByName(arg);
+  if (!skill || !player.skillsKnown?.includes(skill.id)) {
+    localEvents.push({
+      id: randomUUID(),
+      text: "Skill não conhecida.",
+      ts: Date.now(),
+      type: "info",
+    });
+    return;
+  }
+  if (skill.kind === "active") {
+    const bar = player.skillBar ?? [];
+    if (bar.includes(skill.id)) {
+      localEvents.push({
+        id: randomUUID(),
+        text: `${skill.name} já está equipada.`,
+        ts: Date.now(),
+        type: "info",
+      });
+      return;
+    }
+    if (bar.length >= ACTIVE_SKILL_SLOTS) {
+      localEvents.push({
+        id: randomUUID(),
+        text: `Slots ativos cheios (${ACTIVE_SKILL_SLOTS}).`,
+        ts: Date.now(),
+        type: "info",
+      });
+      return;
+    }
+    bar.push(skill.id);
+    player.skillBar = bar;
+  } else {
+    const bar = player.passiveBar ?? [];
+    if (bar.includes(skill.id)) {
+      localEvents.push({
+        id: randomUUID(),
+        text: `${skill.name} já está equipada.`,
+        ts: Date.now(),
+        type: "info",
+      });
+      return;
+    }
+    if (bar.length >= PASSIVE_SKILL_SLOTS) {
+      localEvents.push({
+        id: randomUUID(),
+        text: `Slots passivos cheios (${PASSIVE_SKILL_SLOTS}).`,
+        ts: Date.now(),
+        type: "info",
+      });
+      return;
+    }
+    bar.push(skill.id);
+    player.passiveBar = bar;
+  }
+  localEvents.push({
+    id: randomUUID(),
+    text: `${skill.name} equipada.`,
+    ts: Date.now(),
+    type: "info",
+  });
+};
+
+const unequipSkillCommand = (player: PlayerRecord, arg: string, localEvents: GameEvent[]) => {
+  const [idRaw] = arg.trim().split(/\s+/);
+  if (!idRaw) {
+    localEvents.push({
+      id: randomUUID(),
+      text: "Use: skill unequip <id>.",
+      ts: Date.now(),
+      type: "info",
+    });
+    return;
+  }
+  const skill = skillById(idRaw) ?? skillByName(arg);
+  if (!skill) {
+    localEvents.push({
+      id: randomUUID(),
+      text: "Skill não encontrada.",
+      ts: Date.now(),
+      type: "info",
+    });
+    return;
+  }
+  if (skill.kind === "active") {
+    player.skillBar = (player.skillBar ?? []).filter((id) => id !== skill.id);
+  } else {
+    player.passiveBar = (player.passiveBar ?? []).filter((id) => id !== skill.id);
+  }
+  localEvents.push({
+    id: randomUUID(),
+    text: `${skill.name} removida do slot.`,
+    ts: Date.now(),
+    type: "info",
   });
 };
 
@@ -717,7 +767,43 @@ const toPlayerView = (player: PlayerRecord): PlayerView => ({
   affinityKnown: player.affinityKnown,
   attributes: player.attributes,
   statusEffects: player.statusEffects,
+  formation: player.formation,
+  skills: (player.skillsKnown ?? []).map((id) => {
+    const skill = skillById(id);
+    return {
+      id,
+      name: skill?.name ?? id,
+      kind: (skill?.kind as any) ?? "active",
+      equipped: (player.skillBar ?? []).includes(id) || (player.passiveBar ?? []).includes(id),
+      cooldown: player.skillCooldowns?.[id] ?? 0,
+    };
+  }),
 });
+
+const skillListEvent = (player: PlayerRecord, localEvents: GameEvent[]) => {
+  const skills = player.skillsKnown ?? [];
+  if (!skills.length) {
+    localEvents.push({
+      id: randomUUID(),
+      text: "Nenhuma habilidade conhecida.",
+      ts: Date.now(),
+      type: "info",
+    });
+    return;
+  }
+  const lines = skills.map((id) => {
+    const s = skillById(id);
+    const equipped = (player.skillBar ?? []).includes(id) || (player.passiveBar ?? []).includes(id);
+    const cd = player.skillCooldowns?.[id] ?? 0;
+    return `${s?.name ?? id} [${s?.kind ?? "?"}]${equipped ? " (equipada)" : ""}${cd > 0 ? ` CD:${cd}` : ""}`;
+  });
+  localEvents.push({
+    id: randomUUID(),
+    text: `Skills: ${lines.join(" | ")}`,
+    ts: Date.now(),
+    type: "info",
+  });
+};
 
 export const loginOrCreate = async (
   email: string,
@@ -774,16 +860,25 @@ const buildRoomView = (store: GameStore, player: PlayerRecord): RoomView => {
     .filter((p) => p.roomId === room.id && p.id !== player.id && p.isAlive)
     .map((p) => ({ id: p.id, name: p.name }));
 
+  const ownerName = room.ownerId ? store.players[room.ownerId]?.name : undefined;
+
   return {
     id: room.id,
     name: room.name,
     description: room.description,
     exits,
     items: [...room.items],
-    monster: room.monster
-      ? { name: room.monster.name, hp: room.monster.hp, maxHp: room.monster.maxHp }
-      : undefined,
+    monsters: (room.monsters ?? []).map((m) => ({ id: m.id, name: m.name, hp: m.hp, maxHp: m.maxHp })),
     occupants,
+    claimable: room.claimable,
+    ownerId: room.ownerId,
+    ownerName,
+    vaultSize: room.vaultSize,
+    vaultCount: room.vault?.length ?? 0,
+    danger: room.danger,
+    biome: room.biome,
+    siteType: room.siteType,
+    buildCost: room.buildCost,
   };
 };
 
@@ -794,6 +889,11 @@ const packSnapshot = (
 ): GameSnapshot => ({
   player: toPlayerView(player),
   room: buildRoomView(store, player),
+  world: Object.values(store.rooms).map((room) => ({
+    id: room.id,
+    name: room.name,
+    exits: Object.entries(room.exits).map(([direction, to]) => ({ direction, to })),
+  })),
   scoreboard: buildScoreboard(store),
   events,
   now: Date.now(),
@@ -848,6 +948,9 @@ const movePlayer = (
   player.roomId = targetRoom.id;
   player.energy = Math.max(0, player.energy - 2);
   player.lastActive = Date.now();
+  if (!targetRoom.monsters || targetRoom.monsters.length === 0) {
+    spawnMonstersForRoom(targetRoom);
+  }
 
   const event = pushEvent(
     store,
@@ -883,6 +986,249 @@ const lookAround = (store: GameStore, player: PlayerRecord, localEvents: GameEve
       type: "system",
     });
   }
+};
+
+const claimRoom = (store: GameStore, player: PlayerRecord, localEvents: GameEvent[]) => {
+  const room = store.rooms[player.roomId];
+  if (!room.claimable) {
+    localEvents.push({
+      id: randomUUID(),
+      text: "Esta area não pode ser dominada.",
+      ts: Date.now(),
+      type: "info",
+    });
+    return;
+  }
+  if ((room.danger ?? 1) > 3) {
+    localEvents.push({
+      id: randomUUID(),
+      text: "Esta área é instável demais para montar base (perigo alto).",
+      ts: Date.now(),
+      type: "info",
+    });
+    return;
+  }
+  if (room.ownerId && room.ownerId === player.id) {
+    localEvents.push({
+      id: randomUUID(),
+      text: "Você já é o dono deste local.",
+      ts: Date.now(),
+      type: "info",
+    });
+    return;
+  }
+  if (room.ownerId && room.ownerId !== player.id) {
+    localEvents.push({
+      id: randomUUID(),
+      text: "Alguém já domina esta área. Enfrente ou negocie antes de tomar.",
+      ts: Date.now(),
+      type: "info",
+    });
+    return;
+  }
+  const cost = room.buildCost ?? buildCostForRoom(room);
+  const goldCost = cost?.gold ?? Math.max(5, ((room.danger ?? 1) * 3) | 0);
+  const energyCost = 4;
+  const neededItems = cost?.items ?? [];
+  const missing = neededItems.filter(
+    (item) => !player.inventory.some((inv) => normalizeText(inv) === normalizeText(item)),
+  );
+  if (missing.length) {
+    localEvents.push({
+      id: randomUUID(),
+      text: `Falta suprimentos para dominar: ${missing.join(", ")}.`,
+      ts: Date.now(),
+      type: "info",
+    });
+    return;
+  }
+  if (player.gold < goldCost) {
+    localEvents.push({
+      id: randomUUID(),
+      text: `Você precisa de ${goldCost} ouro para reivindicar.`,
+      ts: Date.now(),
+      type: "info",
+    });
+    return;
+  }
+  if (player.energy < energyCost) {
+    localEvents.push({
+      id: randomUUID(),
+      text: "Energia insuficiente para canalizar a reivindicação.",
+      ts: Date.now(),
+      type: "info",
+    });
+    return;
+  }
+
+  player.gold -= goldCost;
+  player.energy = Math.max(0, player.energy - energyCost);
+  if (neededItems.length) {
+    for (const req of neededItems) {
+      const idx = player.inventory.findIndex((inv) => normalizeText(inv) === normalizeText(req));
+      if (idx !== -1) {
+        player.inventory.splice(idx, 1);
+      }
+    }
+  }
+  room.ownerId = player.id;
+  ensureVault(room);
+  if (!room.vaultSize) room.vaultSize = 4;
+
+  localEvents.push({
+    id: randomUUID(),
+    text: `${player.name} domina ${room.name} como base. Custo pago: ${goldCost} ouro${neededItems.length ? ` + ${neededItems.join(", ")}` : ""}. Cofre disponível (${room.vaultSize} slots).`,
+    ts: Date.now(),
+    type: "system",
+  });
+};
+
+const unclaimRoom = (store: GameStore, player: PlayerRecord, localEvents: GameEvent[]) => {
+  const room = store.rooms[player.roomId];
+  if (room.ownerId !== player.id) {
+    localEvents.push({
+      id: randomUUID(),
+      text: "Você não é o dono desta área.",
+      ts: Date.now(),
+      type: "info",
+    });
+    return;
+  }
+  // drop vault items no chão
+  if (room.vault?.length) {
+    room.items.push(...room.vault);
+  }
+  room.vault = [];
+  room.ownerId = undefined;
+  localEvents.push({
+    id: randomUUID(),
+    text: `${player.name} abandona ${room.name}. Cofre esvaziado no chão.`,
+    ts: Date.now(),
+    type: "system",
+  });
+};
+
+const vaultCommand = (store: GameStore, player: PlayerRecord, arg: string, localEvents: GameEvent[]) => {
+  const room = store.rooms[player.roomId];
+  if (room.ownerId !== player.id) {
+    localEvents.push({
+      id: randomUUID(),
+      text: "Apenas o dono pode acessar o cofre.",
+      ts: Date.now(),
+      type: "info",
+    });
+    return;
+  }
+  if (!room.vaultSize || room.vaultSize <= 0) {
+    localEvents.push({
+      id: randomUUID(),
+      text: "Não há cofre disponível nesta sala.",
+      ts: Date.now(),
+      type: "info",
+    });
+    return;
+  }
+  ensureVault(room);
+  const [action, ...rest] = arg.trim().split(/\s+/);
+  const itemName = rest.join(" ");
+  if (!action) {
+    localEvents.push({
+      id: randomUUID(),
+      text: "Use: vault deposit <item> ou vault take <item>.",
+      ts: Date.now(),
+      type: "info",
+    });
+    return;
+  }
+  if (action === "deposit" || action === "guardar" || action === "put") {
+    if (!itemName) {
+      localEvents.push({
+        id: randomUUID(),
+        text: "Informe o item para guardar.",
+        ts: Date.now(),
+        type: "info",
+      });
+      return;
+    }
+    if (room.vault!.length >= room.vaultSize) {
+      localEvents.push({
+        id: randomUUID(),
+        text: "Cofre cheio. Melhore ou esvazie slots.",
+        ts: Date.now(),
+        type: "info",
+      });
+      return;
+    }
+    const idx = player.inventory.findIndex(
+      (entry) => normalizeText(entry) === normalizeText(itemName),
+    );
+    if (idx === -1) {
+      localEvents.push({
+        id: randomUUID(),
+        text: "Você não possui esse item.",
+        ts: Date.now(),
+        type: "info",
+      });
+      return;
+    }
+    const [item] = player.inventory.splice(idx, 1);
+    room.vault!.push(item);
+    localEvents.push({
+      id: randomUUID(),
+      text: `${item} guardado no cofre (${room.vault!.length}/${room.vaultSize}).`,
+      ts: Date.now(),
+      type: "loot",
+    });
+    return;
+  }
+  if (action === "take" || action === "pegar" || action === "get") {
+    if (!itemName) {
+      localEvents.push({
+        id: randomUUID(),
+        text: "Informe o item para retirar.",
+        ts: Date.now(),
+        type: "info",
+      });
+      return;
+    }
+    if (player.inventory.length >= INVENTORY_LIMIT) {
+      localEvents.push({
+        id: randomUUID(),
+        text: "Inventário cheio. Libere espaço antes de retirar do cofre.",
+        ts: Date.now(),
+        type: "info",
+      });
+      return;
+    }
+    const idx = room.vault!.findIndex(
+      (entry) => normalizeText(entry) === normalizeText(itemName),
+    );
+    if (idx === -1) {
+      localEvents.push({
+        id: randomUUID(),
+        text: "Item não está no cofre.",
+        ts: Date.now(),
+        type: "info",
+      });
+      return;
+    }
+    const [item] = room.vault!.splice(idx, 1);
+    player.inventory.push(item);
+    localEvents.push({
+      id: randomUUID(),
+      text: `${item} retirado do cofre.`,
+      ts: Date.now(),
+      type: "loot",
+    });
+    return;
+  }
+
+  localEvents.push({
+    id: randomUUID(),
+    text: "Use: vault deposit <item> ou vault take <item>.",
+    ts: Date.now(),
+    type: "info",
+  });
 };
 
 const takeItem = (
@@ -1004,6 +1350,48 @@ const sellItem = (
   localEvents.push(event);
 };
 
+function equipKnownSkill(player: PlayerRecord, skillId: string) {
+  const skill = skillById(skillId);
+  if (!skill) return;
+  if (skill.kind === "active") {
+    const bar = player.skillBar ?? [];
+    if (!bar.includes(skillId) && bar.length < ACTIVE_SKILL_SLOTS) {
+      bar.push(skillId);
+      player.skillBar = bar;
+    }
+  } else {
+    const bar = player.passiveBar ?? [];
+    if (!bar.includes(skillId) && bar.length < PASSIVE_SKILL_SLOTS) {
+      bar.push(skillId);
+      player.passiveBar = bar;
+    }
+  }
+}
+
+function learnSkill(player: PlayerRecord, skillId: string, localEvents: GameEvent[]) {
+  if (!player.skillsKnown) player.skillsKnown = [];
+  if (!player.skillBar) player.skillBar = [];
+  if (!player.passiveBar) player.passiveBar = [];
+  if (!player.skillCooldowns) player.skillCooldowns = {};
+  if (!player.skillsKnown.includes(skillId)) {
+    player.skillsKnown.push(skillId);
+    equipKnownSkill(player, skillId);
+    localEvents.push({
+      id: randomUUID(),
+      text: `Nova habilidade aprendida: ${skillById(skillId)?.name ?? skillId}.`,
+      ts: Date.now(),
+      type: "system",
+    });
+  } else {
+    localEvents.push({
+      id: randomUUID(),
+      text: `Você já conhece ${skillById(skillId)?.name ?? skillId}.`,
+      ts: Date.now(),
+      type: "info",
+    });
+  }
+}
+
 const consumeItem = (
   store: GameStore,
   player: PlayerRecord,
@@ -1027,6 +1415,12 @@ const consumeItem = (
   player.inventory.splice(idx, 1);
 
   const lower = normalizeText(item);
+
+  const skillDrop = Object.entries(SKILL_DROPS).find(([key]) => normalizeText(key) === lower)?.[1];
+  if (skillDrop) {
+    learnSkill(player, skillDrop, localEvents);
+    return;
+  }
 
   if (lower.includes("pocao")) {
     const heal = roll(10, 22);
@@ -1151,18 +1545,99 @@ const fuseEssences = (
   });
 };
 
+const setFormation = (player: PlayerRecord, arg: string, localEvents: GameEvent[]) => {
+  const map: Record<string, Formation> = {
+    vanguarda: "vanguarda",
+    frente: "vanguarda",
+    front: "vanguarda",
+    tanque: "vanguarda",
+    retaguarda: "retaguarda",
+    backline: "retaguarda",
+    suporte: "retaguarda",
+    back: "retaguarda",
+    apoio: "retaguarda",
+    furtivo: "furtivo",
+    stealth: "furtivo",
+    flanco: "furtivo",
+    sentinela: "sentinela",
+    guardiao: "sentinela",
+    parede: "sentinela",
+    artilharia: "artilharia",
+    range: "artilharia",
+    longe: "artilharia",
+  };
+
+  const normalized = normalizeText(arg);
+  const target = map[normalized];
+  if (!target) {
+    localEvents.push({
+      id: randomUUID(),
+      text: "Use: formation <vanguarda|retaguarda|furtivo|sentinela|artilharia> (ou frente/back/flanco).",
+      ts: Date.now(),
+      type: "info",
+    });
+    return;
+  }
+
+  player.formation = target;
+  const mods = FORMATION_MODS[target];
+  localEvents.push({
+    id: randomUUID(),
+    text: `Formacao ajustada para ${mods.label}. (acerto ${mods.hit >= 0 ? "+" : ""}${mods.hit}, crit ${mods.crit >= 0 ? "+" : ""}${mods.crit}, mitigacao ${mods.mitigation >= 0 ? "+" : ""}${Math.round(mods.mitigation * 100)}%)`,
+    ts: Date.now(),
+    type: "info",
+  });
+};
+
+const selectMonster = (room: Room, arg?: string): Monster | undefined => {
+  if (!room.monsters || room.monsters.length === 0) return undefined;
+  if (!arg) return room.monsters[0];
+  const normalized = normalizeText(arg);
+  const idx = parseInt(arg, 10);
+  if (!Number.isNaN(idx) && idx >= 1 && idx <= room.monsters.length) {
+    return room.monsters[idx - 1];
+  }
+  return room.monsters.find((m) => normalizeText(m.name).includes(normalized));
+};
+
 const attack = (
   store: GameStore,
   player: PlayerRecord,
+  arg: string,
   localEvents: GameEvent[],
 ) => {
   const room = store.rooms[player.roomId];
-  if (!room.monster) {
+  const monsters = room.monsters ?? [];
+  const listMonsters = () =>
+    monsters.map((m, idx) => `${idx + 1}. ${m.name} (${m.hp}/${m.maxHp ?? m.hp} HP)`).join(' | ');
+
+  if (monsters.length === 0) {
     localEvents.push({
       id: randomUUID(),
-      text: "Nenhum inimigo a vista.",
+      text: "Nenhum inimigo na sala. Use 'look' ou mova-se para outra sala.",
       ts: Date.now(),
-      type: "info",
+      type: 'info',
+    });
+    return;
+  }
+
+  if (!arg) {
+    localEvents.push({
+      id: randomUUID(),
+      text: `Escolha um alvo: ${listMonsters()} (use 'attack <id|nome>').`,
+      ts: Date.now(),
+      type: 'info',
+    });
+    return;
+  }
+
+  const target = selectMonster(room, arg);
+  if (!target) {
+    localEvents.push({
+      id: randomUUID(),
+      text: `Alvo nao encontrado. Alvos validos: ${listMonsters()}.`,
+      ts: Date.now(),
+      type: 'info',
     });
     return;
   }
@@ -1170,9 +1645,9 @@ const attack = (
   if (player.energy <= 0) {
     localEvents.push({
       id: randomUUID(),
-      text: "Você está exausto. Use 'rest' ou 'descansar'.",
+      text: "Voce esta exausto. Use 'rest' ou 'descansar'.",
       ts: Date.now(),
-      type: "info",
+      type: 'info',
     });
     return;
   }
@@ -1181,29 +1656,33 @@ const attack = (
   if (player.energy < energyCost) {
     localEvents.push({
       id: randomUUID(),
-      text: "Energia insuficiente para atacar. Descanse.",
+      text: 'Energia insuficiente para atacar. Descanse.',
       ts: Date.now(),
-      type: "info",
+      type: 'info',
     });
     return;
   }
 
   const buffPrecision = player.statusEffects
-    .filter((s) => s.kind === "buff" && s.stat === "precision")
+    .filter((s) => s.kind === 'buff' && s.stat === 'precision')
     .reduce((acc, s) => acc + s.magnitude, 0);
   const buffMight = player.statusEffects
-    .filter((s) => s.kind === "buff" && s.stat === "might")
+    .filter((s) => s.kind === 'buff' && s.stat === 'might')
     .reduce((acc, s) => acc + s.magnitude, 0);
+  const passiveBonus = getPassiveBonus(player);
   const awakened = getAwakenedBonus(player);
+  const formationMods = FORMATION_MODS[player.formation] ?? FORMATION_MODS.vanguarda;
 
   const hitChance = Math.max(
     35,
     Math.min(
       95,
       65 +
-        (player.attributes.precision + buffPrecision) * 2 -
+        (player.attributes.precision + buffPrecision + passiveBonus.precision) * 2 -
         Math.floor(player.attributes.agility / 5) +
-        awakened.crit,
+        awakened.crit +
+        passiveBonus.crit +
+        formationMods.hit,
     ),
   );
   const rollHit = Math.random() * 100;
@@ -1211,16 +1690,20 @@ const attack = (
     player.energy = Math.max(0, player.energy - Math.max(1, Math.floor(energyCost / 2)));
     localEvents.push({
       id: randomUUID(),
-      text: `${player.name} erra ${room.monster.name}.`,
+      text: `${player.name} erra ${target.name}.`,
       ts: Date.now(),
-      type: "combat",
+      type: 'combat',
     });
     return;
   }
 
   const critChance = Math.min(
     40,
-    player.attributes.crit + (player.attributes.precision + buffPrecision) * 0.6 + awakened.crit,
+    player.attributes.crit +
+      (player.attributes.precision + buffPrecision + passiveBonus.precision) * 0.6 +
+      awakened.crit +
+      passiveBonus.crit +
+      formationMods.crit,
   );
   const isCrit = Math.random() * 100 < critChance;
   const essenceBonus =
@@ -1234,15 +1717,18 @@ const attack = (
     Math.round(player.attributes.will * 0.3) +
     essenceBonus +
     awakened.dmg;
-  const playerHit = Math.max(3, Math.round(baseDamage * (isCrit ? 1.4 : 1)));
+  const playerHit = Math.max(
+    3,
+    Math.round(baseDamage * (1 + formationMods.dmg) * (isCrit ? 1.4 : 1)),
+  );
 
-  room.monster.hp -= playerHit;
+  target.hp -= playerHit;
   player.energy = Math.max(0, player.energy - energyCost);
 
   const attackEvent = pushEvent(
     store,
-    `${player.name} ${isCrit ? "crita" : "atinge"} ${room.monster.name} (-${playerHit} HP).`,
-    "combat",
+    `${player.name} ${isCrit ? 'crita' : 'atinge'} ${target.name} (-${playerHit} HP).`,
+    'combat',
     room.id,
   );
   localEvents.push(attackEvent);
@@ -1251,61 +1737,64 @@ const attack = (
       id: randomUUID(),
       text: awakened.text,
       ts: Date.now(),
-      type: "info",
+      type: 'info',
     });
   }
 
-  if (room.monster.hp <= 0) {
-    const reward = room.monster.reward;
+  if (target.hp <= 0) {
+    const reward = target.reward;
     player.score += reward;
     player.hp = Math.min(player.maxHp, player.hp + 6);
-    const monsterAffinity = MONSTER_AFFINITY[room.monster.name] ?? player.affinity;
-    const essence = createEssenceItem(monsterAffinity);
-    room.items.push(essence);
-    const lootTable = COMMON_LOOT[room.monster.name];
-    if (lootTable && Math.random() < 0.65) {
+  const monsterAffinity = (MONSTER_AFFINITY[target.name] as Affinity | undefined) ?? player.affinity;
+  const essence = createEssenceItem(monsterAffinity);
+  room.items.push(essence);
+  const lootTable = COMMON_LOOT[target.name];
+  if (lootTable && Math.random() < 0.65) {
       const loot = lootTable[roll(0, lootTable.length - 1)];
       room.items.push(loot);
     }
     const defeatEvent = pushEvent(
       store,
-      `${player.name} derrotou ${room.monster.name}! (+${reward} pontos)`,
-      "combat",
+      `${player.name} derrotou ${target.name}! (+${reward} pontos)`,
+      'combat',
       room.id,
     );
     localEvents.push(defeatEvent);
     localEvents.push(
       pushEvent(
         store,
-        `${room.monster.name} deixou cair ${essence}.`,
-        "loot",
+        `${target.name} deixou cair ${essence}.`,
+        'loot',
         room.id,
       ),
     );
-    room.monster = undefined;
+    const tags = MONSTER_TAGS[target.name] || target.tags || [];
+    awardTagProgress(player, tags, localEvents);
+    room.monsters = room.monsters.filter((m) => m.id !== target.id);
     return;
   }
 
-  const mitigation = Math.round(player.attributes.defense * 0.6 + player.attributes.resistance * 0.3);
+  const mitigationBase = Math.round(player.attributes.defense * 0.6 + player.attributes.resistance * 0.3);
+  const mitigation = Math.round(mitigationBase * (1 + formationMods.mitigation));
   const retaliation = Math.max(
     2,
-    room.monster.attack + roll(-2, 3) - Math.round(mitigation * 0.2),
+    target.attack + roll(-2, 3) - Math.round(mitigation * 0.2),
   );
   player.hp -= retaliation;
 
   const retaliationEvent = pushEvent(
     store,
-    `${room.monster.name} contra-ataca ${player.name} (-${retaliation} HP).`,
-    "combat",
+    `${target.name} contra-ataca ${player.name} (-${retaliation} HP).`,
+    'combat',
     room.id,
   );
   localEvents.push(retaliationEvent);
 
-  const debuff = MONSTER_DEBUFFS[room.monster.name];
+  const debuff = MONSTER_DEBUFFS[target.name];
   if (debuff) {
     addStatus(
       player,
-      { name: debuff.name, kind: "debuff", stat: debuff.stat, magnitude: debuff.magnitude, duration: debuff.duration },
+      { name: debuff.name, kind: 'debuff', stat: debuff.stat, magnitude: debuff.magnitude, duration: debuff.duration },
       localEvents,
     );
   }
@@ -1313,9 +1802,188 @@ const attack = (
   if (player.hp <= 0) {
     player.isAlive = false;
     player.hp = 0;
-    pushEvent(store, `${player.name} foi nocauteado!`, "combat", room.id);
+    pushEvent(store, `${player.name} foi nocauteado!`, 'combat', room.id);
   }
 };
+
+function castSkill(
+  store: GameStore,
+  player: PlayerRecord,
+  arg: string,
+  localEvents: GameEvent[],
+) {
+  const [first, ...rest] = arg.trim().split(/\s+/);
+  if (!first) {
+    localEvents.push({
+      id: randomUUID(),
+      text: "Use: skill <nome|id> [alvo|all].",
+      ts: Date.now(),
+      type: "info",
+    });
+    return;
+  }
+  const skill =
+    skillByName(first) ??
+    skillById(first) ??
+    skillByName(rest.join(" "));
+  if (!skill) {
+    localEvents.push({
+      id: randomUUID(),
+      text: "Habilidade desconhecida.",
+      ts: Date.now(),
+      type: "info",
+    });
+    return;
+  }
+  if (!player.skillsKnown?.includes(skill.id)) {
+    localEvents.push({
+      id: randomUUID(),
+      text: "Você não conhece essa habilidade.",
+      ts: Date.now(),
+      type: "info",
+    });
+    return;
+  }
+  if (skill.kind !== "active") {
+    localEvents.push({
+      id: randomUUID(),
+      text: "Essa habilidade é passiva.",
+      ts: Date.now(),
+      type: "info",
+    });
+    return;
+  }
+  const bar = player.skillBar ?? [];
+  if (!bar.includes(skill.id)) {
+    localEvents.push({
+      id: randomUUID(),
+      text: "Equipe a habilidade primeiro (slots limitados).",
+      ts: Date.now(),
+      type: "info",
+    });
+    return;
+  }
+  if (!player.skillCooldowns) player.skillCooldowns = {};
+  if ((player.skillCooldowns[skill.id] ?? 0) > 0) {
+    localEvents.push({
+      id: randomUUID(),
+      text: `${skill.name} está em recarga (${player.skillCooldowns[skill.id]}).`,
+      ts: Date.now(),
+      type: "info",
+    });
+    return;
+  }
+  const room = store.rooms[player.roomId];
+  const targets: Monster[] = [];
+  if (skill.target === "aoe") {
+    targets.push(...(room.monsters ?? []));
+  } else if (skill.target === "single") {
+    const targetArg = rest.join(" ");
+    const target = selectMonster(room, targetArg) ?? room.monsters?.[0];
+    if (target) targets.push(target);
+  }
+  if (skill.target !== "self" && targets.length === 0) {
+    localEvents.push({
+      id: randomUUID(),
+      text: "Nenhum alvo para a habilidade.",
+      ts: Date.now(),
+      type: "info",
+    });
+    return;
+  }
+  const energyCost = skill.cost?.energy ?? 0;
+  const hpCost = skill.cost?.hp ?? 0;
+  if (player.energy < energyCost) {
+    localEvents.push({
+      id: randomUUID(),
+      text: "Energia insuficiente.",
+      ts: Date.now(),
+      type: "info",
+    });
+    return;
+  }
+  if (player.hp <= hpCost) {
+    localEvents.push({
+      id: randomUUID(),
+      text: "HP insuficiente para usar.",
+      ts: Date.now(),
+      type: "info",
+    });
+    return;
+  }
+  player.energy = Math.max(0, player.energy - energyCost);
+  player.hp = Math.max(1, player.hp - hpCost);
+  if (skill.cooldown) player.skillCooldowns[skill.id] = skill.cooldown;
+
+  const passiveBonus = getPassiveBonus(player);
+  const baseDamage = skill.base ?? 0;
+  const scale =
+    (skill.scaling?.might ?? 0) * player.attributes.might +
+    (skill.scaling?.precision ?? 0) * (player.attributes.precision + passiveBonus.precision) +
+    (skill.scaling?.will ?? 0) * player.attributes.will;
+  const totalBase = Math.max(0, Math.round(baseDamage + scale));
+
+  if (skill.target === "self") {
+    if (skill.status) {
+      addStatus(
+        player,
+        { name: skill.name, kind: "buff", stat: skill.status.stat as any, magnitude: skill.status.magnitude, duration: skill.status.duration },
+        localEvents,
+      );
+    }
+    localEvents.push({
+      id: randomUUID(),
+      text: `${player.name} ativa ${skill.name}.`,
+      ts: Date.now(),
+      type: "system",
+    });
+    return;
+  }
+
+  for (const target of targets) {
+    const dmg = Math.max(1, totalBase + roll(-3, 3));
+    target.hp -= dmg;
+    localEvents.push(
+      pushEvent(
+        store,
+        `${player.name} usa ${skill.name} em ${target.name} (-${dmg} HP).`,
+        "combat",
+        room.id,
+      ),
+    );
+    if (skill.status) {
+      localEvents.push({
+        id: randomUUID(),
+        text: `${target.name} sofre efeito ${skill.status.stat} (${skill.status.magnitude}/${skill.status.duration}).`,
+        ts: Date.now(),
+        type: "combat",
+      });
+    }
+    if (target.hp <= 0) {
+      const reward = target.reward;
+      player.score += reward;
+      player.hp = Math.min(player.maxHp, player.hp + 4);
+      const monsterAffinity = (MONSTER_AFFINITY[target.name] as Affinity | undefined) ?? player.affinity;
+      const essence = createEssenceItem(monsterAffinity);
+      room.items.push(essence);
+      const lootTable = COMMON_LOOT[target.name];
+      if (lootTable && Math.random() < 0.65) {
+        const loot = lootTable[roll(0, lootTable.length - 1)];
+        room.items.push(loot);
+      }
+      localEvents.push(
+        pushEvent(
+          store,
+          `${player.name} derrotou ${target.name}! (+${reward} pontos)`,
+          "combat",
+          room.id,
+        ),
+      );
+      room.monsters = room.monsters.filter((m) => m.id !== target.id);
+    }
+  }
+}
+
 
 const restAction = (player: PlayerRecord, localEvents: GameEvent[]) => {
   const heal = roll(4, 10);
@@ -1368,7 +2036,7 @@ const say = (
 const help = (localEvents: GameEvent[]) => {
   localEvents.push({
     id: randomUUID(),
-  text: "Comandos: north/sul/leste/oeste (ou n/s/l/o), look, attack, rest, say <texto>, take <item>, drop <item>, sell <item>, use <item>, fuse <a> <b>, reveal/altar (afinidade na caverna), respawn.",
+    text: "Comandos: north/sul/leste/oeste (ou n/s/l/o), look, attack [alvo], rest, say <texto>, take <item>, drop <item>, sell <item>, use <item>, fuse <a> <b>, skill <id>, formation <vanguarda|retaguarda|furtivo|sentinela|artilharia>, claim/unclaim (custa ouro + sucatas), vault deposit/take, reveal/altar (afinidade na caverna), respawn.",
     ts: Date.now(),
     type: "info",
   });
@@ -1431,6 +2099,13 @@ export const joinPlayer = async (
       attributes,
       affinityKnown: false,
       statusEffects: [],
+      formation: "vanguarda",
+      tagProgress: {},
+      ...initSkills(),
+      skillsKnown: STARTER_SKILLS.slice(),
+      skillBar: STARTER_SKILLS.slice(0, ACTIVE_SKILL_SLOTS),
+      passiveBar: [],
+      skillCooldowns: {},
     };
     store.players[playerId] = player;
     const room = store.rooms[player.roomId];
@@ -1453,8 +2128,24 @@ export const joinPlayer = async (
     if (player.affinityKnown === undefined) {
       player.affinityKnown = false;
     }
+    if (!player.tagProgress) {
+      player.tagProgress = {};
+    }
+    if (!player.formation) {
+      player.formation = "vanguarda";
+    }
     if (!player.statusEffects) {
       player.statusEffects = [];
+    }
+    if (!player.skillsKnown) player.skillsKnown = [];
+    if (!player.skillBar) player.skillBar = [];
+    if (!player.passiveBar) player.passiveBar = [];
+    if (!player.skillCooldowns) player.skillCooldowns = {};
+    for (const starter of STARTER_SKILLS) {
+      if (!player.skillsKnown.includes(starter)) player.skillsKnown.push(starter);
+    }
+    if (!player.skillBar.length) {
+      player.skillBar = STARTER_SKILLS.slice(0, ACTIVE_SKILL_SLOTS);
     }
     const vitals = deriveVitals(player.attributes);
     if (!player.maxEnergy) {
@@ -1482,6 +2173,9 @@ export const getState = async (playerId: string, since?: number): Promise<GameSn
   if (!player) return null;
 
   player.lastActive = Date.now();
+  if (!player.formation) {
+    player.formation = "vanguarda";
+  }
   const events =
     since && Number.isFinite(since)
       ? store.log.filter((event) => event.ts > since)
@@ -1516,6 +2210,7 @@ export const runCommand = async (
         origin: ORIGINS[0],
         affinityKnown: false,
         attributes: makeAttributes(ORIGINS[0]),
+        formation: "vanguarda",
       } as unknown as PlayerView,
       room: {
         id: "",
@@ -1523,8 +2218,14 @@ export const runCommand = async (
         description: "Jogador não encontrado.",
         exits: [],
         items: [],
+        monsters: [],
         occupants: [],
       },
+      world: Object.values(store.rooms).map((r) => ({
+        id: r.id,
+        name: r.name,
+        exits: Object.entries(r.exits).map(([direction, to]) => ({ direction, to })),
+      })),
       scoreboard: [],
       events: [],
       now: Date.now(),
@@ -1533,6 +2234,10 @@ export const runCommand = async (
   }
 
   player.lastActive = Date.now();
+  tickCooldowns(player);
+  if (!player.formation) {
+    player.formation = "vanguarda";
+  }
 
   const input = rawCommand?.trim();
   const localEvents: GameEvent[] = [];
@@ -1593,7 +2298,7 @@ export const runCommand = async (
     case "attack":
     case "atacar":
     case "fight":
-      attack(store, player, localEvents);
+      attack(store, player, arg, localEvents);
       break;
     case "look":
     case "olhar":
@@ -1629,6 +2334,35 @@ export const runCommand = async (
     case "fundir":
       fuseEssences(player, arg, localEvents);
       break;
+    case "skill":
+    case "cast":
+      {
+        const sub = normalizeText(arg.split(/\s+/)[0] ?? "");
+        if (sub === "list") {
+          skillListEvent(player, localEvents);
+        } else if (sub === "equip") {
+          equipSkillCommand(player, arg.replace(/^\s*equip\s+/i, ""), localEvents);
+        } else if (sub === "unequip" || sub === "remove") {
+          unequipSkillCommand(player, arg.replace(/^\s*(unequip|remove)\s+/i, ""), localEvents);
+        } else {
+          castSkill(store, player, arg, localEvents);
+        }
+      }
+      break;
+    case "claim":
+    case "dominar":
+    case "conquistar":
+      claimRoom(store, player, localEvents);
+      break;
+    case "unclaim":
+    case "abandonar":
+    case "liberar":
+      unclaimRoom(store, player, localEvents);
+      break;
+    case "vault":
+    case "cofre":
+      vaultCommand(store, player, arg, localEvents);
+      break;
     case "fortify":
     case "aegis":
       addStatus(player, { name: "Fortify", kind: "buff", stat: "defense", magnitude: 4, duration: 3 }, localEvents);
@@ -1651,6 +2385,11 @@ export const runCommand = async (
         ts: Date.now(),
         type: "info",
       });
+      break;
+    case "formation":
+    case "formacao":
+    case "linha":
+      setFormation(player, arg, localEvents);
       break;
     case "reveal":
     case "despertar":
