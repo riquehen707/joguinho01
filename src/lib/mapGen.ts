@@ -122,7 +122,13 @@ const pick = <T,>(rng: () => number, arr: T[] | readonly T[]): T =>
 const randint = (rng: () => number, min: number, max: number) =>
   Math.floor(rng() * (max - min + 1)) + min;
 
-const createRoomFromBiome = (rng: () => number, biome: BiomeDef, id: string): RoomTemplate => {
+const createRoomFromBiome = (
+  rng: () => number,
+  biome: BiomeDef,
+  id: string,
+  anchorFrom?: string,
+  anchorDir?: (typeof dirs)[number],
+): RoomTemplate => {
   const mobCount = randint(rng, 1, 3);
   const monsters: MonsterTemplate[] = Array.from({ length: mobCount }).map(() =>
     pick(rng, biome.monsters),
@@ -146,6 +152,8 @@ const createRoomFromBiome = (rng: () => number, biome: BiomeDef, id: string): Ro
     claimable: biome.claimable ?? claimable,
     vaultSize: biome.vaultSize ?? Math.max(3, danger),
     siteType,
+    anchorFrom,
+    anchorDir,
   };
 };
 
@@ -170,7 +178,7 @@ export const generateProceduralRooms = (count = 30, seed = "frag-world"): RoomTe
     const anchor = anchors[i % anchors.length];
     const biome = BIOMES[i % BIOMES.length];
     const id = `${biome.id}-${i + 1}`;
-    const room = createRoomFromBiome(rng, biome, id);
+    const room = createRoomFromBiome(rng, biome, id, anchor.from, anchor.dir);
     room.exits[opposite[anchor.dir]] = anchor.from;
     rooms.push(room);
   }
@@ -218,6 +226,16 @@ export const buildWorldTemplates = (
 ): RoomTemplate[] => {
   const procedurals = generateProceduralRooms(count, seed);
   const map = new Map<string, RoomTemplate>();
+
+  const rng = mulberry32(makeSeed(seed + "-connect"));
+  const pickFreeDir = (room: RoomTemplate): (typeof dirs)[number] | null => {
+    const shuffled = [...dirs].sort(() => rng() - 0.5);
+    for (const d of shuffled) {
+      if (!room.exits[d]) return d;
+    }
+    return null;
+  };
+
   for (const tpl of base) {
     map.set(tpl.id, {
       ...tpl,
@@ -228,14 +246,35 @@ export const buildWorldTemplates = (
   }
   for (let i = 0; i < procedurals.length; i++) {
     const proc = procedurals[i];
-    const anchor = proc.exits[Object.keys(proc.exits)[0]];
-    const anchorDir = Object.entries(proc.exits).find(([, target]) => target === anchor)?.[0] as
-      | (typeof dirs)[number]
-      | undefined;
+    const anchor = proc.anchorFrom;
+    const anchorDir = proc.anchorDir;
     if (anchor && anchorDir) {
       const anchorRoom = map.get(anchor);
       if (anchorRoom) {
-        anchorRoom.exits[opposite[anchorDir]] = proc.id;
+        const desiredDir = anchorDir;
+        const freeDir = anchorRoom.exits[desiredDir] ? pickFreeDir(anchorRoom) : desiredDir;
+        const connectDir = freeDir ?? desiredDir;
+        const oldTarget = anchorRoom.exits[connectDir];
+
+        // conecta anchor -> proc
+        anchorRoom.exits[connectDir] = proc.id;
+        // proc -> anchor
+        proc.exits[opposite[connectDir]] = anchorRoom.id;
+
+        // se sobrescreveu uma saida existente, tenta reencaminhar o antigo alvo
+        if (oldTarget && oldTarget !== proc.id) {
+          const procFree = pickFreeDir(proc);
+          if (procFree) {
+            proc.exits[procFree] = oldTarget;
+            const oldRoom = map.get(oldTarget);
+            if (oldRoom) {
+              const back = opposite[procFree];
+              if (!oldRoom.exits[back]) {
+                oldRoom.exits[back] = proc.id;
+              }
+            }
+          }
+        }
       }
     }
     map.set(proc.id, proc);
