@@ -925,6 +925,29 @@ const cleanupIdle = (store: GameStore) => {
   }
 };
 
+const debugExits = (store: GameStore, player: PlayerRecord, localEvents: GameEvent[]) => {
+  const room = store.rooms[player.roomId];
+  const exits = Object.entries(room.exits).map(([dir, to]) => `${dir} -> ${to}`);
+  const neighbors = Object.values(room.exits).map((id) => store.rooms[id]).filter(Boolean);
+  const neighborLines = neighbors.map((r) => {
+    const ex = Object.entries(r.exits)
+      .map(([dir, to]) => `${dir}:${to}`)
+      .join(", ");
+    return `${r.id}: ${ex || "sem saidas"}`;
+  });
+  const text = [
+    `Sala atual: ${room.id}`,
+    `Saidas: ${exits.length ? exits.join(" | ") : "nenhuma"}`,
+    `Vizinhas: ${neighborLines.length ? neighborLines.join(" || ") : "nenhuma"}`,
+  ].join(" / ");
+  localEvents.push({
+    id: randomUUID(),
+    text,
+    ts: Date.now(),
+    type: "info",
+  });
+};
+
 const movePlayer = (
   store: GameStore,
   player: PlayerRecord,
@@ -2390,6 +2413,11 @@ export const runCommand = async (
     case "formacao":
     case "linha":
       setFormation(player, arg, localEvents);
+      break;
+    case "map":
+    case "exits":
+    case "debugmap":
+      debugExits(store, player, localEvents);
       break;
     case "reveal":
     case "despertar":
