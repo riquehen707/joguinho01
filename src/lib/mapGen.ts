@@ -174,28 +174,43 @@ export const generateProceduralRooms = (count = 30, seed = "frag-world"): RoomTe
     room.exits[opposite[anchor.dir]] = anchor.from;
     rooms.push(room);
   }
-  // cria conexões extras entre procedurais para evitar caminhos lineares
+
+  // conexões extras entre procedurais, evitando sobrescrever saídas existentes
+  const pickFreeDir = (room: RoomTemplate): (typeof dirs)[number] | null => {
+    const shuffled = [...dirs].sort(() => rng() - 0.5);
+    for (const d of shuffled) {
+      if (!room.exits[d]) return d;
+    }
+    return null;
+  };
+
   for (let i = 0; i < rooms.length; i++) {
     const a = rooms[i];
     const b = rooms[(i + 1) % rooms.length];
-    const dir = pick(rng, dirs);
-    a.exits[dir] = b.id;
-    b.exits[opposite[dir]] = a.id;
+    const dir = pickFreeDir(a);
+    if (dir) {
+      const back = opposite[dir];
+      if (!b.exits[back]) {
+        a.exits[dir] = b.id;
+        b.exits[back] = a.id;
+      }
+    }
 
     if (rng() < 0.65) {
       const c = rooms[(i + 2) % rooms.length];
-      const dir2 = pick(rng, dirs);
-      a.exits[dir2] = c.id;
-      c.exits[opposite[dir2]] = a.id;
+      const dir2 = pickFreeDir(a);
+      if (dir2) {
+        const back2 = opposite[dir2];
+        if (!c.exits[back2]) {
+          a.exits[dir2] = c.id;
+          c.exits[back2] = a.id;
+        }
+      }
     }
   }
   return rooms;
 };
 
-/**
- * Une base fixa + procedurais e injeta as saídas de volta nos anchors.
- * O número de procedurais pode ser ajustado pelo parâmetro `count`.
- */
 export const buildWorldTemplates = (
   base: RoomTemplate[],
   seed = "frag-world",
