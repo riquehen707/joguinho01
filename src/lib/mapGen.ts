@@ -279,5 +279,31 @@ export const buildWorldTemplates = (
     }
     map.set(proc.id, proc);
   }
+
+  // Conecta algumas salas procedurais diretamente na praça para expandir o hub
+  const hub = map.get("praca");
+  if (hub) {
+    const candidates = procedurals.slice(0, 6);
+    for (const proc of candidates) {
+      const dir = pickFreeDir(hub);
+      if (!dir) break;
+      const back = opposite[dir];
+      const oldTarget = hub.exits[dir];
+      hub.exits[dir] = proc.id;
+      proc.exits[back] = "praca";
+      // se sobrescrevemos uma saída, reencaminha
+      if (oldTarget && oldTarget !== proc.id) {
+        const free = pickFreeDir(proc);
+        if (free) {
+          proc.exits[free] = oldTarget;
+          const oldRoom = map.get(oldTarget);
+          if (oldRoom && !oldRoom.exits[opposite[free]]) {
+            oldRoom.exits[opposite[free]] = proc.id;
+          }
+        }
+      }
+    }
+  }
+
   return Array.from(map.values());
 };
