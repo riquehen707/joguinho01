@@ -1,18 +1,27 @@
-import { NextResponse } from "next/server";
-import { runCommand } from "@/lib/mudEngine";
+import { NextRequest, NextResponse } from "next/server";
+import { executeCommand } from "@/lib/game/commands/handleCommand";
 
-export const runtime = "nodejs";
+export async function POST(req: NextRequest) {
+  const body = await req.json().catch(() => null);
 
-export async function POST(request: Request) {
-  const payload = await request.json();
-  const playerId: string | undefined = payload?.playerId;
-  const command: string = payload?.command ?? "";
-
-  if (!playerId) {
-    return NextResponse.json({ error: "PlayerId ausente." }, { status: 400 });
+  if (!body || !body.playerId || !body.input) {
+    return NextResponse.json(
+      { ok: false, error: "playerId e input obrigatórios" },
+      { status: 400 }
+    );
   }
 
-  const snapshot = await runCommand(playerId, command);
-  const status = snapshot.error ? 400 : 200;
-  return NextResponse.json(snapshot, { status });
+  try {
+    const result = await executeCommand({
+      playerId: body.playerId,
+      rawInput: body.input,
+    });
+    return NextResponse.json(result, { status: 200 });
+  } catch (err) {
+    console.error("MUD route error:", err);
+    return NextResponse.json(
+      { ok: false, error: "Erro interno" },
+      { status: 500 }
+    );
+  }
 }

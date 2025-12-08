@@ -1,0 +1,251 @@
+[
+  {
+    "id": "whispering-tomb",
+    "name": "Tumba Sussurrante",
+    "trigger": [
+      "exploração cuidadosa",
+      "sala com ecos espirituais",
+      "passiva investigativa",
+      "instinto acima do normal"
+    ],
+    "effect": {
+      "reveal": "uma tumba coberta por poeira viva se manifesta",
+      "interaction": "sussurros convidam à aproximação",
+      "combatRisk": "entidade pode despertar se moral do jogador for baixa",
+      "ritual": "permite pacto com o morto"
+    },
+    "playerImpact": {
+      "memory": "recebe lembranças históricas",
+      "moral": "melancolia profunda",
+      "lineage": "necromância pode despertar"
+    },
+    "outcomes": [
+      {
+        "type": "pact",
+        "description": "o jogador recebe permissão para manipular mortos fracos"
+      },
+      {
+        "type": "essence",
+        "description": "memória espiritual condensada"
+      },
+      {
+        "type": "trap",
+        "description": "a tumba pode cobrar cobrança emocional"
+      }
+    ]
+  },
+
+  {
+    "id": "living-door",
+    "name": "Porta Viva",
+    "trigger": [
+      "raiz viva ativa",
+      "linhagem feral ou vegetal",
+      "exploração paciente",
+      "moral estável"
+    ],
+    "effect": {
+      "terrainShift": "parede orgânica abre passagem secreta",
+      "exploration": "nova sala viva surge",
+      "combat": "hordas são filtradas — só um ou dois entram",
+      "ritual": "porta reage a oferenda vegetal"
+    },
+    "playerImpact": {
+      "identity": "vínculo territorial",
+      "moral": "sensação de acolhimento espiritual",
+      "lineage": "flora espiritual pode se desenvolver"
+    },
+    "outcomes": [
+      {
+        "type": "secretRoom",
+        "description": "sala botânica com memórias"
+      },
+      {
+        "type": "resource",
+        "description": "seiva ritual ou raiz viva"
+      },
+      {
+        "type": "entity",
+        "description": "espírito botânico negociador"
+      }
+    ]
+  },
+
+  {
+    "id": "astral-manifestation",
+    "name": "Manifestação Astral",
+    "trigger": [
+      "mana elevada",
+      "uso de cajado ou ritual",
+      "silêncio ambiental",
+      "exploração lenta"
+    ],
+    "effect": {
+      "vision": "campo astral se sobrepõe ao físico",
+      "mapping": "conexões de sala tornam-se nítidas",
+      "combatShift": "monstros espirituais podem atravessar paredes",
+      "pact": "essência pode falar com jogador"
+    },
+    "playerImpact": {
+      "clarity": "entende como caminhos convergem",
+      "lineage": "ritual psíquico desperta",
+      "risk": "exposição mental profunda"
+    },
+    "outcomes": [
+      {
+        "type": "path",
+        "description": "atalho entre salas distantes"
+      },
+      {
+        "type": "narrative",
+        "description": "memória espiritual antiga"
+      },
+      {
+        "type": "ritual",
+        "description": "jogador aprende a selar ou abrir passa-grafias"
+      }
+    ]
+  },
+
+  {
+    "id": "echoing-vault",
+    "name": "Cofre de Ecos",
+    "trigger": [
+      "arquétipo disciplinado",
+      "curiosidade",
+      "exploração profunda",
+      "coro espiritual ativo"
+    ],
+    "effect": {
+      "door": "parede vibra com memórias",
+      "narrative": "voz oferece troca histórica",
+      "risk": "cofre pode exigir memória pessoal"
+    },
+    "playerImpact": {
+      "identity": "traumas e memórias podem emergir",
+      "moral": "alívio ou colapso emocional",
+      "lineage": "necromancia, psíquica ou vampírica podem ser amplificadas"
+    },
+    "outcomes": [
+      {
+        "type": "artifact",
+        "description": "artefato esquecido pode ser revelado"
+      },
+      {
+        "type": "knowledge",
+        "description": "história da dungeon"
+      },
+      {
+        "type": "trade",
+        "description": "troca memória por proteção"
+      }
+    ]
+  },
+
+  {
+    "id": "soul-threshold",
+    "name": "Limiar de Alma",
+    "trigger": [
+      "presença espiritual acumulada",
+      "chefes mortos",
+      "sala ritual silenciosa",
+      "jogador com vontade elevada"
+    ],
+    "effect": {
+      "gateway": "porta astral abre brevemente",
+      "combat": "chefes espirituais podem observar",
+      "pact": "linhas de linhagem podem estabilizar"
+    },
+    "playerImpact": {
+      "identity": "arquétipo pode mutar para místico",
+      "lineage": "linhagem ganha clareza",
+      "risk": "impacto emocional intenso"
+    },
+    "outcomes": [
+      {
+        "type": "legacy",
+        "description": "run pode ganhar memória permanente"
+      },
+      {
+        "type": "ability",
+        "description": "habilidade ritual pode ser aprendida"
+      },
+      {
+        "type": "navigation",
+        "description": "atalho para boss room"
+      }
+    ]
+  },
+
+  {
+    "id": "forgotten-sanctum",
+    "name": "Santuário Esquecido",
+    "trigger": [
+      "exploração com paciência",
+      "moral tranquila",
+      "passiva investigativa",
+      "ritual de limpeza"
+    ],
+    "effect": {
+      "reveal": "um altar escondido emerge da parede",
+      "ambient": "ar fica silencioso",
+      "entity": "espírito guardião surge",
+      "negotiation": "entidade oferece pacto"
+    },
+    "playerImpact": {
+      "lineage": "pode ganhar afinidade espiritual",
+      "identity": "arquétipo torna-se mais coletor, não guerreiro",
+      "risk": "guarda pode exigir devoção"
+    },
+    "outcomes": [
+      {
+        "type": "artifact",
+        "description": "relíquia espiritual antiga"
+      },
+      {
+        "type": "essence",
+        "description": "destilado astral"
+      },
+      {
+        "type": "blessing",
+        "description": "proteção persistente"
+      }
+    ]
+  },
+
+  {
+    "id": "hidden-labyrinth",
+    "name": "Labirinto Escondido",
+    "trigger": [
+      "necessidade de fuga",
+      "exploração desesperada",
+      "arquétipo oportunista",
+      "horda em perseguição"
+    ],
+    "effect": {
+      "terrain": "as paredes se reconfiguram narrativamente",
+      "escape": "jogador escapa da horda",
+      "mapping": "salas conectadas mudam de ordem",
+      "risk": "labirinto pode fechar sozinho"
+    },
+    "playerImpact": {
+      "identity": "espírito explorador ativo",
+      "moral": "alívio absoluto ou pânico",
+      "lineage": "passagem espiritual pode abrir pacto"
+    },
+    "outcomes": [
+      {
+        "type": "survival",
+        "description": "escapar de morte certa"
+      },
+      {
+        "type": "secretRoom",
+        "description": "refúgio interno"
+      },
+      {
+        "type": "mapKnowledge",
+        "description": "melhor entendimento da topologia"
+      }
+    ]
+  }
+]

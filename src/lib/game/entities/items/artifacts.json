@@ -1,0 +1,229 @@
+[
+  {
+    "id": "sanguine-chalice",
+    "name": "Cálice Sanguíneo",
+    "rarity": "lendário",
+    "bindingType": "permanente",
+    "origin": "câmara vampírica ancestral",
+    "acquisitionMethod": [
+      "ritual com sangue vivo",
+      "derrota de sub-chefe vampírico",
+      "memória espiritual encontrada"
+    ],
+    "effects": {
+      "lineageImpact": "estabiliza linhagem vampírica adquirida",
+      "healing": "cura espiritual ao consumir essência",
+      "drainNarrative": "pode sugar moral de inimigos feridos",
+      "resurrection": "pode recuperar o usuário se houver vínculo ativo"
+    },
+    "conditions": [
+      "precisa de essência fresca",
+      "pacto exige vontade elevada",
+      "uso excessivo pode alterar arquétipo para predador"
+    ],
+    "worldImpact": {
+      "respawn": "salas próximas ganham assombração sanguínea",
+      "moral": "inimigos ficam intimidados com o portador",
+      "secretPaths": "portas orgânicas podem se abrir com sangue"
+    },
+    "synergyWithPassives": [
+      "regeneração sombria",
+      "predação narrativa",
+      "invisibilidade em penumbra"
+    ],
+    "synergyWithLineage": [
+      "vampiro = pactos coletivos",
+      "necromante = domínio sobre mortos drenados"
+    ],
+    "risks": [
+      "arquétipo pode virar caçador compulsivo",
+      "memória emocional absorvida"
+    ],
+    "transformationPotential": [
+      "cálice vivo",
+      "fonte permanente em sala ritual",
+      "totem sanguíneo que afeta run inteira"
+    ]
+  },
+
+  {
+    "id": "ossuary-crown",
+    "name": "Coroa do Ossuário",
+    "rarity": "épico",
+    "bindingType": "ritual-persistente",
+    "origin": "trono de ossos de sub-chefe",
+    "acquisitionMethod": [
+      "queda de soberano ossífero",
+      "invocação com fragmentos",
+      "pacto com muralha de ossos"
+    ],
+    "effects": {
+      "defense": "resistência espiritual massiva",
+      "presence": "autoridade narrativa — monstros menores recuam",
+      "bossImpact": "chefes podem negociar trégua espiritual",
+      "minionControl": "pode comandar espíritos fracos como guardiões"
+    },
+    "conditions": [
+      "cérebro emocional deve suportar memórias",
+      "fadiga mental enorme",
+      "não funciona sob luz ritual"
+    ],
+    "worldImpact": {
+      "ecology": "salas próximas ganham guardiões ósseos",
+      "ritual": "pactos podem ser delegados a espíritos"
+    },
+    "synergyWithPassives": [
+      "armadura óssea",
+      "barreira astral",
+      "canalização de defesa"
+    ],
+    "synergyWithLineage": [
+      "lich = domínio de necroconstrução",
+      "vampírico = drenagem coletiva"
+    ],
+    "risks": [
+      "memória de chefes anteriores pode afetar o portador",
+      "arquétipo muda para protetor ritual"
+    ],
+    "transformationPotential": [
+      "coroa animada com personalidade",
+      "fortificação espiritual em salas ligadas",
+      "totem para boss rooms"
+    ]
+  },
+
+  {
+    "id": "whispering-lantern",
+    "name": "Lanterna Sussurrante",
+    "rarity": "raro",
+    "bindingType": "vínculo gradual",
+    "origin": "cripta espiritual abandonada",
+    "acquisitionMethod": [
+      "ritual de descoberta",
+      "exploração profunda",
+      "manifestação espontânea"
+    ],
+    "effects": {
+      "exploration": "detecta passagens secretas pela voz",
+      "mapping": "narra conexões que personagens não enxergam",
+      "hordeImpact": "hordas evitam iluminação espiritual"
+    },
+    "conditions": [
+      "precisa de silêncio",
+      "em combate funciona parcialmente",
+      "medo irracional se a lanterna parar de falar"
+    ],
+    "worldImpact": {
+      "topology": "salas secretas se estabilizam",
+      "ritual": "portas podem ser reveladas",
+      "ambient": "vozes deixam rastros narrativos"
+    },
+    "synergyWithPassives": [
+      "detecção ambiental",
+      "curiosidade narrativa",
+      "busca de segredos"
+    ],
+    "synergyWithLineage": [
+      "sombrio = comunicação espiritual",
+      "elemental = leitura de raízes e fendas"
+    ],
+    "risks": [
+      "portador pode depender emocionalmente",
+      "lanterna pode narrar memórias alheias",
+      "arquétipo vira explorador compulsivo"
+    ],
+    "transformationPotential": [
+      "lanterna viva",
+      "porta espiritual portátil",
+      "autonomia ritual — guia NPC"
+    ]
+  },
+
+  {
+    "id": "chorus-of-echoes",
+    "name": "Coro de Ecos",
+    "rarity": "lendário",
+    "bindingType": "metafísico",
+    "origin": "abismo ressonante",
+    "acquisitionMethod": [
+      "absorção após vitória contra assombração coral",
+      "pacto com sala musical",
+      "memória dissonante"
+    ],
+    "effects": {
+      "combatNarrative": "voz múltipla desestabiliza moral de hordas",
+      "fear": "elite espiritual hesita",
+      "stealth": "movimento silencioso auditivo"
+    },
+    "conditions": [
+      "não funciona sob ruído contínuo",
+      "precisa de ressonância ambiental"
+    ],
+    "worldImpact": {
+      "respawn": "salas vizinhas adquirem coro espectral",
+      "ritual": "portador pode harmonizar rachaduras"
+    },
+    "synergyWithPassives": [
+      "vibração espiritual",
+      "manipulação emocional",
+      "moral teatral"
+    ],
+    "synergyWithLineage": [
+      "psíquico = coro de pensamentos",
+      "feral = ululato ritual"
+    ],
+    "risks": [
+      "portador pode ouvir memórias de dezenas de almas",
+      "arquétipo muda para carisma ritual"
+    ],
+    "transformationPotential": [
+      "entidade viva anexada ao usuário",
+      "instrumento ritual orgânico",
+      "porta sonora para outro plano"
+    ]
+  },
+
+  {
+    "id": "root-heart",
+    "name": "Coração de Raiz",
+    "rarity": "epico",
+    "bindingType": "simbiótico",
+    "origin": "tumba botânica de sub-chefe selvagem",
+    "acquisitionMethod": [
+      "absorção pós-colheita",
+      "ritual com sangue + terra viva",
+      "oferta ao espírito da sala"
+    ],
+    "effects": {
+      "regeneration": "cura lenta mas contínua",
+      "territory": "raízes podem bloquear horda por turnos",
+      "exploration": "detecta caminhos orgânicos"
+    },
+    "conditions": [
+      "precisa de conexão emocional com ambiente",
+      "reduz mobilidade em salas artificiais"
+    ],
+    "worldImpact": {
+      "ambient": "raízes começam a colonizar salas adjacentes",
+      "respawn": "vegetação viva altera ecossistema regional"
+    },
+    "synergyWithPassives": [
+      "simbiogênese",
+      "defesa orgânica",
+      "caminho secreto botânico"
+    ],
+    "synergyWithLineage": [
+      "feral = floresta sanguínea viva",
+      "elemental = árvore espiritual portátil"
+    ],
+    "risks": [
+      "simbiose pode impor compulsão territorial",
+      "arquétipo vira guardião da natureza"
+    ],
+    "transformationPotential": [
+      "árvore viva no inventário",
+      "território físico conquistado",
+      "permadeath ecológica — sala recorda o portador"
+    ]
+  }
+]

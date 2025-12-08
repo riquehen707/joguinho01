@@ -9,10 +9,12 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "ioredis": "^5.8.2",
     "next": "16.0.7",
     "react": "19.2.0",
     "react-dom": "19.2.0",
-    "redis": "^4.7.1"
+    "redis": "^4.7.1",
+    "ws": "^8.18.3"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",

@@ -1,0 +1,160 @@
+[
+  {
+    "id": "mournful-resonance",
+    "name": "Ressonância Lutuosa",
+    "trigger": [
+      "chefes morrem em sequência",
+      "muitas mortes recentes na região",
+      "uso de artefatos necromânticos"
+    ],
+    "effect": {
+      "moralShift": "todos os seres sentem luto coletivo",
+      "combatNarrative": "monstros hesitam antes de atacar",
+      "eliteInteraction": "elites necróticas tornam-se contemplativas",
+      "lineageInfluence": "linhagem vampírica sofre memória emocional"
+    },
+    "worldImpact": {
+      "respawn": "entidades tornam-se rarefeitas",
+      "exploration": "salas revelam túmulos esquecidos",
+      "ritual": "pactos com mortos tornam-se possíveis"
+    },
+    "resolutionOptions": [
+      "procissão ritual",
+      "cantos harmônicos",
+      "memorial coletivo"
+    ],
+    "duration": "longo"
+  },
+
+  {
+    "id": "wild-ascension",
+    "name": "Ascensão Selvagem",
+    "trigger": [
+      "raiz viva colonizando salas",
+      "artefato botânico ativo",
+      "linhagem feral estabilizada"
+    ],
+    "effect": {
+      "terrainShift": "raízes crescem espontaneamente",
+      "movementControl": "salas tornam-se orgânicas",
+      "combatShift": "hordas ficam mais territoriais",
+      "exploration": "caminhos orgânicos surgem"
+    },
+    "worldImpact": {
+      "respawn": "selvageria ganha vida",
+      "ritual": "linhas espirituais com plantas emergem",
+      "ambient": "polinização narrativa"
+    },
+    "resolutionOptions": [
+      "queima ritual",
+      "corte de raiz com arma pesada",
+      "oferta botânica"
+    ],
+    "duration": "médio a longo"
+  },
+
+  {
+    "id": "bone-fortification",
+    "name": "Fortificação Óssea",
+    "trigger": [
+      "coroa ossuária ativa",
+      "boss necrótico morto",
+      "memórias de ossuário combinadas"
+    ],
+    "effect": {
+      "defense": "salas ganham muralhas ósseas vivas",
+      "combatShift": "chefes ganham refúgio espiritual",
+      "eliteInteraction": "guardas ósseos podem spawnar",
+      "exploration": "túneis ósseos secretos surgem"
+    },
+    "worldImpact": {
+      "respawn": "entidades fracas desaparecem",
+      "ritual": "porta fúnebre pode ser aberta",
+      "ambient": "temperatura espiritual cai"
+    },
+    "resolutionOptions": [
+      "destruição ritual",
+      "reverência",
+      "troca espiritual"
+    ],
+    "duration": "extremo e persistente"
+  },
+
+  {
+    "id": "psionic-distortion",
+    "name": "Distorção Psíquica",
+    "trigger": [
+      "duelos mentais",
+      "swarm psíquico",
+      "linha do tempo instável"
+    ],
+    "effect": {
+      "skillInterference": "habilidades com mana falham parcialmente",
+      "decisionFog": "textos narrativos ficam distorcidos",
+      "combatShift": "elite psíquica ganha prioridade"
+    },
+    "worldImpact": {
+      "exploration": "salas revelam memórias que não aconteceram",
+      "pact": "entidades psíquicas tentam acordo",
+      "respawn": "elite mental substitui horda fraca"
+    },
+    "resolutionOptions": [
+      "luz ritual",
+      "som harmônico",
+      "invocação botânica"
+    ],
+    "duration": "curto-médio"
+  },
+
+  {
+    "id": "silent-dread",
+    "name": "Temor Silencioso",
+    "trigger": [
+      "derrotas sucessivas de jogadores",
+      "elite espiritual acumulada",
+      "sala assombrada"
+    ],
+    "effect": {
+      "moralShift": "jogadores perdem moral naturalmente",
+      "combatShift": "combate parece mais pesado",
+      "eliteInteraction": "chefes espirituais sentem fraqueza coletiva"
+    },
+    "worldImpact": {
+      "exploration": "portas se fecham por medo",
+      "ritual": "pactos com fuga espiritual"
+    },
+    "resolutionOptions": [
+      "benção",
+      "registro histórico",
+      "lanterna sussurrante"
+    ],
+    "duration": "médio"
+  },
+
+  {
+    "id": "ember-season",
+    "name": "Estação Ascendente de Brasas",
+    "trigger": [
+      "armaduras ígneas ativas",
+      "chefe vulcânico derrotado",
+      "ritual térmico"
+    ],
+    "effect": {
+      "terrainShift": "solo quente, combate com calor acumulado",
+      "combatShift": "golpes físicos exalam fumaça",
+      "hordeInteraction": "enxames sofrem dano ambiental",
+      "eliteInteraction": "monstros adaptam postura"
+    },
+    "worldImpact": {
+      "respawn": "região torna-se terreno ígneo vivo",
+      "ritual": "caminhos de magma narrativo",
+      "ambient": "visão turva e ar pesado"
+    },
+    "resolutionOptions": [
+      "frio ritual",
+      "purificação",
+      "desconexão espiritual"
+    ],
+    "duration": "longo"
+  }
+]

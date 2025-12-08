@@ -1,0 +1,218 @@
+[
+  {
+    "id": "corpse-resurgence",
+    "name": "Ressurgência Cadavérica",
+    "trigger": [
+      "morte recente em sala",
+      "ambiente com ossos expostos",
+      "baixa moral coletiva",
+      "presença necromântica"
+    ],
+    "effect": {
+      "spawn": "horda óssea parcial",
+      "combatShift": "moral dos jogadores diminui",
+      "risk": "cadáveres levantam durante combate",
+      "eliteInteraction": "elite necromântica se fortalece",
+      "bossInteraction": "chefes necróticos podem ser convocados"
+    },
+    "playerImpact": {
+      "fearNarrative": "pressão psicológica",
+      "fatigue": "combate prolongado",
+      "equipmentWear": "arranhões e rachaduras"
+    },
+    "resolutionOptions": [
+      "ritual de silêncio",
+      "impacto explosivo",
+      "selamento espiritual",
+      "negociação com horda se necro-lineage ativa"
+    ],
+    "lootOptions": [
+      "fragmentos ósseos ritualizados",
+      "memória fúnebre",
+      "essência fraca"
+    ]
+  },
+
+  {
+    "id": "living-root-embrace",
+    "name": "Abraço de Raízes Vivas",
+    "trigger": [
+      "exploração prolongada",
+      "sala botânica",
+      "baixa moral de monstros",
+      "passiva de curiosidade"
+    ],
+    "effect": {
+      "terrainShift": "raízes fecham saídas secundárias",
+      "combatShift": "horda presa, combate posicional",
+      "regeneration": "cura lenta para quem estiver parado",
+      "secret": "sala secundária pode ser detectada"
+    },
+    "playerImpact": {
+      "bondNarrative": "conexão vegetal profunda",
+      "territoriality": "portador sente compulsão protetora"
+    },
+    "resolutionOptions": [
+      "ritual com terra viva",
+      "essência vegetal",
+      "destruição com fogo"
+    ],
+    "lootOptions": [
+      "seiva ritual",
+      "raiz viva",
+      "memória botânica"
+    ]
+  },
+
+  {
+    "id": "ambient-dissonance",
+    "name": "Dissonância Ambiental",
+    "trigger": [
+      "excesso de mana",
+      "duelo prolongado",
+      "uso de artefato",
+      "elite psíquica sentindo trauma"
+    ],
+    "effect": {
+      "psychicInterference": "jogadores sofrem vertigem, perda temporária de foco",
+      "combatShift": "monstros psíquicos tomam vantagem",
+      "skillBlock": "algumas habilidades se tornam indisponíveis",
+      "lineageShift": "arquétipo pode mudar temporariamente"
+    },
+    "playerImpact": {
+      "moral": "queda rápida",
+      "stamina": "exaustão mental"
+    },
+    "resolutionOptions": [
+      "luz ritual",
+      "cantos harmônicos",
+      "consumível psíquico"
+    ],
+    "lootOptions": [
+      "memória residual",
+      "fragmento sináptico"
+    ]
+  },
+
+  {
+    "id": "shadow-collapse",
+    "name": "Colapso Sombrio",
+    "trigger": [
+      "sala escura",
+      "linhagem sombria ativa",
+      "horda fugindo",
+      "ressonância espiritual negativa"
+    ],
+    "effect": {
+      "visibility": "narrativa muda para sombras completas",
+      "combatShift": "backstab narrativo habilitado",
+      "eliteInteraction": "monstro espiritual ganha forma",
+      "hordeImpact": "horda dispersa ou se silencia"
+    },
+    "playerImpact": {
+      "stealth": "quase invisível para monstros físicos",
+      "risk": "monstros espirituais são atraídos"
+    },
+    "resolutionOptions": [
+      "ritual de luz",
+      "consumível clarão",
+      "fuga ou barganha"
+    ],
+    "lootOptions": [
+      "sombra condensada",
+      "resíduo espectral"
+    ]
+  },
+
+  {
+    "id": "blood-harvest",
+    "name": "Colheita de Sangue",
+    "trigger": [
+      "vários corpos",
+      "boss sanguíneo morto",
+      "ritual vampírico",
+      "passivas predatórias"
+    ],
+    "effect": {
+      "spawn": "entidade sanguínea única",
+      "arena": "salas tornam-se orgânicas",
+      "combatShift": "luta ritualizada",
+      "resource": "essência coletiva disponível"
+    },
+    "playerImpact": {
+      "presence": "pressão narrativa forte",
+      "risk": "pacto pode alterar alma"
+    },
+    "resolutionOptions": [
+      "drenagem",
+      "banho ritual",
+      "sacrifício de moral"
+    ],
+    "lootOptions": [
+      "essência densa",
+      "memória da linhagem",
+      "capacidade de pactos"
+    ]
+  },
+
+  {
+    "id": "swarm-stampede",
+    "name": "Estampede de Enxame",
+    "trigger": [
+      "sala estreita",
+      "moral da horda alta",
+      "resíduos alimentares",
+      "excesso de ruído"
+    ],
+    "effect": {
+      "combatShift": "pressão simultânea em múltiplos alvos",
+      "movement": "dificuldades para manter posição",
+      "equipmentWear": "arranhões agressivos",
+      "panic": "jogador pode falhar decisões narrativas"
+    },
+    "playerImpact": {
+      "fear": "moral despenca",
+      "fatigue": "exaustão defensiva"
+    },
+    "resolutionOptions": [
+      "piche",
+      "clarão",
+      "ritual de silêncio animal",
+      "empurrão físico"
+    ],
+    "lootOptions": [
+      "glândulas do enxame",
+      "carapaça quebrada"
+    ]
+  },
+
+  {
+    "id": "silent-negotiation",
+    "name": "Negociação Silenciosa",
+    "trigger": [
+      "arquétipo diplomático",
+      "coro de ecos ativo",
+      "boss espiritual enfraquecido",
+      "ritual de pacificação"
+    ],
+    "effect": {
+      "combatShift": "combate pode pausar",
+      "spawn": "espíritos neutros aparecem",
+      "pact": "chefes e elites podem negociar passagem ou essências",
+      "worldMemory": "o mundo lembra do acordo"
+    },
+    "playerImpact": {
+      "identityShift": "arquétipo muda para diplomático ou místico",
+      "moral": "recuperação coletiva"
+    },
+    "resolutionOptions": [
+      "sacrifício espiritual",
+      "essência em troca",
+      "juramento da sala"
+    ],
+    "lootOptions": [
+      "essência neutra",
+      "memória histórica"
+    ]
+  }
+]

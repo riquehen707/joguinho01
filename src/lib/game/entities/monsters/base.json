@@ -1,0 +1,221 @@
+[
+  {
+    "id": "skeletal-servant",
+    "name": "Servo Esquelético",
+    "biome": "undead",
+    "threatLevel": "low",
+    "moralePattern": "inexistente",
+    "behavior": ["obediente", "linear", "sem medo"],
+    "combatStyle": ["ataque físico simples", "pressão leve"],
+    "environmentAffinity": ["ossuário", "cripta", "catacumba"],
+    "resistances": ["perfuração leve", "frio suave"],
+    "vulnerabilities": ["impacto", "fogo ritual"],
+    "lootTendency": ["ossos frágeis", "poções fracas", "moedas antigas"],
+    "eventHooks": ["reforço de horda necrótica", "defesa ritual"],
+    "lineageInteraction": [
+      "espíritos vampíricos dominam facilmente",
+      "rituais necromânticos recebem bônus"
+    ]
+  },
+  {
+    "id": "skeletal-archer",
+    "name": "Arqueiro Esquelético",
+    "biome": "undead",
+    "threatLevel": "medium",
+    "moralePattern": "inexistente",
+    "behavior": ["distância", "emboscada ritual", "hostilidade"],
+    "combatStyle": ["flechas espirituais", "tiros silenciosos"],
+    "environmentAffinity": ["corredores longos", "ossários com varandas"],
+    "resistances": ["perfuração", "frio ritual"],
+    "vulnerabilities": ["impacto", "luz espiritual"],
+    "lootTendency": ["flechas antigas", "poções fracas", "runa fúnebre"],
+    "eventHooks": ["reforço arqueiro em combates prolongados"],
+    "lineageInteraction": ["dominação vampírica parcial"]
+  },
+  {
+    "id": "ghoul",
+    "name": "Carniçal Faminto",
+    "biome": "undead",
+    "threatLevel": "medium",
+    "moralePattern": "instável",
+    "behavior": ["emboscada", "rapina", "agressividade"],
+    "combatStyle": ["arranhão", "mordida drenante", "rasteira"],
+    "environmentAffinity": ["criptas", "salas com carne velha"],
+    "resistances": ["escuridão", "doenças"],
+    "vulnerabilities": ["fogo", "impacto"],
+    "lootTendency": ["glândula necrótica", "fibras mortas"],
+    "eventHooks": ["horda espontânea quando moral está alta"],
+    "lineageInteraction": [
+      "vampirismo domina carniçais",
+      "necromancia os ritualiza"
+    ]
+  },
+  {
+    "id": "feral-wolf",
+    "name": "Lobo Feral",
+    "biome": "feral",
+    "threatLevel": "low-medium",
+    "moralePattern": "de matilha",
+    "behavior": ["caçada", "pressão lateral", "ameaça coletiva"],
+    "combatStyle": ["investida", "mordida", "derrubada"],
+    "environmentAffinity": ["salas com vegetação", "passagens com cheiro de presa"],
+    "resistances": ["frio moderado"],
+    "vulnerabilities": ["fogo", "rituais"],
+    "lootTendency": ["peles", "sangue animal", "glândula olfativa"],
+    "eventHooks": ["matilha reforça combate se houver aliados"],
+    "lineageInteraction": [
+      "linhagem feral aumenta afinidade",
+      "ritos lunares transformam em guardiões"
+    ]
+  },
+  {
+    "id": "feral-wolf-elite",
+    "name": "Lobo Alfa",
+    "biome": "feral",
+    "threatLevel": "medium-high",
+    "moralePattern": "de matilha, inabalável",
+    "behavior": ["domínio territorial", "coordenação", "foco"],
+    "combatStyle": ["laceração", "empurrão", "caçada coletiva"],
+    "environmentAffinity": ["selvas rituais", "salas com raízes"],
+    "resistances": ["sangue", "frio"],
+    "vulnerabilities": ["impacto forte", "ritual"],
+    "lootTendency": ["sangue lunar", "garras duráveis"],
+    "eventHooks": ["invoca matilha se moral alta"],
+    "lineageInteraction": [
+      "linhagem feral se inspira",
+      "rituais de pacto lupino beneficiam jogadores"
+    ]
+  },
+  {
+    "id": "fungal-hermit",
+    "name": "Ermitão Fúngico",
+    "biome": "nature",
+    "threatLevel": "medium",
+    "moralePattern": "resistente",
+    "behavior": ["defesa passiva", "espalhamento de esporos"],
+    "combatStyle": ["lentidão", "envenenamento", "raízes restritivas"],
+    "environmentAffinity": ["salas com raízes, musgo, fungos"],
+    "resistances": ["veneno", "umidade"],
+    "vulnerabilities": ["fogo", "sangue"],
+    "lootTendency": ["fungos alquímicos raros"],
+    "eventHooks": ["crescimento ambiental progressivo"],
+    "lineageInteraction": [
+      "rituais botânicos podem controlar",
+      "necromancia vegetal cria híbridos"
+    ]
+  },
+  {
+    "id": "giant-fungal-guardian",
+    "name": "Guardião Fúngico Gigante",
+    "biome": "nature",
+    "threatLevel": "high",
+    "moralePattern": "inquebrável",
+    "behavior": ["defesa territorial", "asfixia", "lentidão"],
+    "combatStyle": ["golpe monstruoso", "raiz sufocante", "poço de esporos"],
+    "environmentAffinity": ["salas com vegetação viva"],
+    "resistances": ["veneno", "frio", "arranhões"],
+    "vulnerabilities": ["fogo intenso", "rituais sanguíneos"],
+    "lootTendency": ["seiva rara", "glândula fúngica", "micélio ritual"],
+    "eventHooks": [
+      "câmara se fecha progressivamente",
+      "matos espirituais surgem"
+    ],
+    "lineageInteraction": [
+      "linhagem vegetal aumenta sinergia",
+      "rituais podem torná-lo aliado temporário"
+    ]
+  },
+  {
+    "id": "spectral-wisp",
+    "name": "Fogo-Fátuo",
+    "biome": "spiritual",
+    "threatLevel": "low",
+    "moralePattern": "inexistente",
+    "behavior": ["evasão", "ilusões", "movimento errático"],
+    "combatStyle": ["queimadura espiritual", "eco fantasmagórico"],
+    "environmentAffinity": ["câmaras espirituais", "poços rituais"],
+    "resistances": ["impacto", "veneno"],
+    "vulnerabilities": ["luz forte", "rituais"],
+    "lootTendency": ["cristal espiritual fraco"],
+    "eventHooks": ["energia ritual alimenta aparições"],
+    "lineageInteraction": ["necromancia controla facilmente"]
+  },
+  {
+    "id": "spectral-guardian",
+    "name": "Guardião Espiritual",
+    "biome": "spiritual",
+    "threatLevel": "medium-high",
+    "moralePattern": "imóvel",
+    "behavior": ["defesa ritual", "barreira", "proteção de artefatos"],
+    "combatStyle": ["golpe espiritual", "onda vibrante"],
+    "environmentAffinity": ["alta concentração energética"],
+    "resistances": ["impacto", "frio ritual"],
+    "vulnerabilities": ["fogo sagrado", "som claro"],
+    "lootTendency": ["essência espiritual", "relíquia espectral"],
+    "eventHooks": [
+      "bloqueia exploração com barreiras",
+      "pode ser persuadido por linhagem adequada"
+    ],
+    "lineageInteraction": [
+      "necromancia = submissão",
+      "espiritualidade = diplomacia ritual"
+    ]
+  },
+  {
+    "id": "mind-swarm",
+    "name": "Enxame Psíquico",
+    "biome": "psionic",
+    "threatLevel": "medium",
+    "moralePattern": "coletiva",
+    "behavior": ["ritmo telepático", "confusão", "hostilidade"],
+    "combatStyle": ["atordoamento", "ruído mental", "distorção"],
+    "environmentAffinity": ["salas com sinapses, ecos"],
+    "resistances": ["psique fraca", "veneno"],
+    "vulnerabilities": ["ritual sonoro", "armas perfurantes"],
+    "lootTendency": ["memória encapsulada", "glândula mental"],
+    "eventHooks": ["rituais psíquicos tornam-se mais frequentes"],
+    "lineageInteraction": [
+      "espírito coral domina enxames",
+      "linhagens psíquicas absorvem memórias"
+    ]
+  },
+  {
+    "id": "mind-walker",
+    "name": "Andarilho Psíquico",
+    "biome": "psionic",
+    "threatLevel": "high",
+    "moralePattern": "inquebrável",
+    "behavior": ["dominação mental", "silenciamento", "previsão"],
+    "combatStyle": ["congelamento telepático", "confusão severa"],
+    "environmentAffinity": ["câmaras com cristais sinápticos"],
+    "resistances": ["sonho", "psique", "veneno leve"],
+    "vulnerabilities": ["impacto brutal", "rituais sanguíneos"],
+    "lootTendency": ["orbe psíquico", "fragmento de sinapse"],
+    "eventHooks": [
+      "impede habilidades por ondas",
+      "transforma moral em pânico"
+    ],
+    "lineageInteraction": [
+      "coral = controle",
+      "mentes coletivas = absorção"
+    ]
+  },
+  {
+    "id": "scarab-scorcher",
+    "name": "Escaravelho Incandescente",
+    "biome": "fire-plague",
+    "threatLevel": "medium",
+    "moralePattern": "em enxame",
+    "behavior": ["perfuração", "explosão", "invasão"],
+    "combatStyle": ["abrasão", "mordida térmica", "explosão mortal"],
+    "environmentAffinity": ["salas quentes", "magma"],
+    "resistances": ["fogo", "calor extremo"],
+    "vulnerabilities": ["frio", "ritual"],
+    "lootTendency": ["glandula térmica fraca", "carapaça"],
+    "eventHooks": ["influencia spawn de horda ígnea"],
+    "lineageInteraction": [
+      "elemental ígneo os convoca",
+      "linhagens de cinzas absorvem glândulas"
+    ]
+  }
+]

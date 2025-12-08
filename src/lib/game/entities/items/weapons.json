@@ -1,0 +1,290 @@
+[
+  {
+    "id": "rusted-sword",
+    "name": "Espada Enferrujada",
+    "category": "blade",
+    "handlingStyle": "corpo-a-corpo",
+    "reach": "curta",
+    "fatigueCost": "baixo",
+    "breakRisk": "alto",
+    "moralImpact": "baixo",
+    "conditions": ["precisa de proximidade física"],
+    "staminaInteraction": "consumo leve mas constante",
+    "environmentAffinity": ["salas estreitas", "corredores"],
+    "hordeEffect": "ineficiente contra múltiplos vetores",
+    "hitFlavor": [
+      "golpe superficial",
+      "corte irregular",
+      "arranhões corrosivos"
+    ],
+    "synergyWithPassives": [
+      "adaptação de corte",
+      "aprendizagem improvisada",
+      "maestria em sucata"
+    ],
+    "synergyWithLineage": [
+      "vampírico pode drenar com acerto",
+      "feral aumenta agressividade",
+      "ritualista amplia impacto narrativo"
+    ],
+    "spiritualInterpretation": "memória de batalhas antigas",
+    "transformationPotential": ["pode ser reforjada", "arma viva após pacto"],
+    "lootRarity": "comum"
+  },
+  {
+    "id": "iron-sabre",
+    "name": "Sabre de Ferro",
+    "category": "blade",
+    "handlingStyle": "corpo-a-corpo flexível",
+    "reach": "curta-média",
+    "fatigueCost": "baixo a moderado",
+    "breakRisk": "baixo",
+    "moralImpact": "moderado",
+    "conditions": ["visão clara", "mobilidade aceitável"],
+    "staminaInteraction": "perde pouco gás, ideal para run longa",
+    "environmentAffinity": ["salas com mobilidade lateral"],
+    "hordeEffect": "cortes múltiplos ralos, mas sem controle",
+    "hitFlavor": [
+      "corte limpo",
+      "finta lateral",
+      "pressão contínua"
+    ],
+    "synergyWithPassives": [
+      "contra-ataque emergente",
+      "foco técnico",
+      "precisão disciplinada"
+    ],
+    "synergyWithLineage": [
+      "feral = investidas mais fortes",
+      "espiritual = cortes etéreos",
+      "vampírico = perfuração com drenagem"
+    ],
+    "spiritualInterpretation": "dança fluida",
+    "transformationPotential": ["sabedoria marcial", "liturgia sangrenta"],
+    "lootRarity": "comum-raro"
+  },
+  {
+    "id": "ritual-dagger",
+    "name": "Adaga Ritual",
+    "category": "blade",
+    "handlingStyle": "precisão e sigilo",
+    "reach": "curta",
+    "fatigueCost": "baixíssimo",
+    "breakRisk": "baixo",
+    "moralImpact": "flutuante",
+    "conditions": ["visão mínima", "proximidade", "arquétipo oportunista para melhor sinergia"],
+    "staminaInteraction": "quase nula",
+    "environmentAffinity": ["rituais", "salas escuras", "campos espirituais"],
+    "hordeEffect": "péssima contra enxames",
+    "hitFlavor": [
+      "punhalada silenciosa",
+      "incisão cirúrgica",
+      "marca sanguínea ritual"
+    ],
+    "synergyWithPassives": [
+      "furtividade",
+      "assassinato emergente",
+      "ritual de sacrifício"
+    ],
+    "synergyWithLineage": [
+      "vampírico = drenagem amplificada",
+      "necromante = pacto sobre cadáver",
+      "psíquico = golpe com silêncio cognitivo"
+    ],
+    "spiritualInterpretation": "assina almas",
+    "transformationPotential": ["se torna lâmina viva", "canalizador para pactos"],
+    "lootRarity": "raro"
+  },
+  {
+    "id": "greatclub",
+    "name": "Clava Gigante",
+    "category": "impact",
+    "handlingStyle": "pesado",
+    "reach": "curta-média",
+    "fatigueCost": "alto",
+    "breakRisk": "baixo",
+    "moralImpact": "alto (intimidação)",
+    "conditions": ["força moderada", "equilíbrio"],
+    "staminaInteraction": "exaustão rápida",
+    "environmentAffinity": ["salas amplas", "combate frontal"],
+    "hordeEffect": "excelente — esmagamento em área",
+    "hitFlavor": [
+      "esmagamento de ossos",
+      "pulverização súbita",
+      "pancada brutal"
+    ],
+    "synergyWithPassives": [
+      "onda de impacto emergente",
+      "bloqueio robusto",
+      "quebra de moral"
+    ],
+    "synergyWithLineage": [
+      "feral = brutalidade aumentada",
+      "espiritual = impacto astral",
+      "lich = armadura óssea ao defender"
+    ],
+    "spiritualInterpretation": "arma-ritmo do corpo",
+    "transformationPotential": ["clava senciente", "totem protetor"],
+    "lootRarity": "comum"
+  },
+  {
+    "id": "battle-hammer",
+    "name": "Martelo de Guerra",
+    "category": "impact",
+    "handlingStyle": "lento e destrutivo",
+    "reach": "curta",
+    "fatigueCost": "alto",
+    "breakRisk": "baixo",
+    "moralImpact": "altíssimo contra elites",
+    "conditions": ["necessita força para ser eficiente"],
+    "staminaInteraction": "drain agressivo",
+    "environmentAffinity": ["boss rooms", "horda estreita"],
+    "hordeEffect": "bom — afasta enxame com empurrão",
+    "hitFlavor": [
+      "rasga armadura",
+      "quebra coluna",
+      "atordoa elite"
+    ],
+    "synergyWithPassives": [
+      "stagger",
+      "controle de colisão",
+      "bloqueio estático"
+    ],
+    "synergyWithLineage": [
+      "vampírico = explosão sanguínea",
+      "espiritual = tremor ritual",
+      "feral = impacto animal"
+    ],
+    "spiritualInterpretation": "juízo ritualista",
+    "transformationPotential": ["martelo de runas", "martelo vivo"],
+    "lootRarity": "comum-médio"
+  },
+  {
+    "id": "long-spear",
+    "name": "Lança Longa",
+    "category": "piercing",
+    "handlingStyle": "distância corpo-a-corpo",
+    "reach": "longa",
+    "fatigueCost": "moderado",
+    "breakRisk": "médio",
+    "moralImpact": "alto contra hordas",
+    "conditions": ["postura firme", "visão clara"],
+    "staminaInteraction": "perda moderada mas sustentável",
+    "environmentAffinity": ["corredores estreitos", "ponteadas"],
+    "hordeEffect": "excelente — impede flanqueamento",
+    "hitFlavor": [
+      "empalamento",
+      "bloqueio frontal",
+      "alcance superior"
+    ],
+    "synergyWithPassives": [
+      "contra-investida",
+      "controle de espaço",
+      "bloqueio posicional"
+    ],
+    "synergyWithLineage": [
+      "feral = caça ritual intensificada",
+      "espiritual = lança astral",
+      "mental = predição de movimento"
+    ],
+    "spiritualInterpretation": "sentinela viva",
+    "transformationPotential": ["lança guardiã", "lança ritual que abre portais"],
+    "lootRarity": "comum-raro"
+  },
+  {
+    "id": "short-bow",
+    "name": "Arco Curto",
+    "category": "ranged",
+    "handlingStyle": "distância",
+    "reach": "longa",
+    "fatigueCost": "baixíssimo",
+    "breakRisk": "moderado",
+    "moralImpact": "baixo",
+    "conditions": ["linha de visão", "espaço para recuar"],
+    "staminaInteraction": "quase nula no ataque, alta na fuga",
+    "environmentAffinity": ["salas grandes", "passagens abertas"],
+    "hordeEffect": "fraco — elimina poucos alvos",
+    "hitFlavor": [
+      "flecha precisa",
+      "finta tática",
+      "golpe posicional"
+    ],
+    "synergyWithPassives": [
+      "acerto crítico narrativo",
+      "controle de terreno",
+      "tiro silencioso"
+    ],
+    "synergyWithLineage": [
+      "ritualista = flecha espiritual",
+      "psíquico = tiro mirado com premonição",
+      "feral = investida combinada"
+    ],
+    "spiritualInterpretation": "predação distanciada",
+    "transformationPotential": ["arco vivo", "canalizador lunar"],
+    "lootRarity": "comum"
+  },
+  {
+    "id": "compound-wildbow",
+    "name": "Arco Selvagem Rituálico",
+    "category": "ranged",
+    "handlingStyle": "cerimonial e agressivo",
+    "reach": "longa",
+    "fatigueCost": "baixo-médio",
+    "breakRisk": "baixo",
+    "moralImpact": "moderado contra elites",
+    "conditions": ["foco espiritual", "mão firme"],
+    "staminaInteraction": "moderado em kiting",
+    "environmentAffinity": ["salas com vento", "vegetação viva"],
+    "hordeEffect": "fraco, mas cria vantagem posicional",
+    "hitFlavor": [
+      "flecha viva",
+      "tiro guiado",
+      "marca animal"
+    ],
+    "synergyWithPassives": [
+      "farther reach",
+      "curva narrativa",
+      "foco lunar"
+    ],
+    "synergyWithLineage": [
+      "feral = predador perfeito",
+      "lunar = rastreio por sangue",
+      "espiritual = flecha fantasma"
+    ],
+    "spiritualInterpretation": "caçada totêmica",
+    "transformationPotential": ["arco-espírito", "predação telepática"],
+    "lootRarity": "raro"
+  },
+  {
+    "id": "arcane-staff",
+    "name": "Cajado Arcano",
+    "category": "channeler",
+    "handlingStyle": "mágico-ritual",
+    "reach": "distância variável",
+    "fatigueCost": "baixo (ataque), alto (canalização)",
+    "breakRisk": "baixo",
+    "moralImpact": "alto (teatral)",
+    "conditions": ["mana ou espírito", "ritual"],
+    "staminaInteraction": "espiritual, não física",
+    "environmentAffinity": ["salas com fendas, cristais, ecos"],
+    "hordeEffect": "excelente — empurra, atordoa, sela",
+    "hitFlavor": [
+      "descarga elemental",
+      "explosão ritual",
+      "muralha arcana"
+    ],
+    "synergyWithPassives": [
+      "telemetria mágica",
+      "canal estruturado",
+      "barreiras espirituais"
+    ],
+    "synergyWithLineage": [
+      "lich = invocação",
+      "espiritual = pactos",
+      "psíquico = silêncio mental"
+    ],
+    "spiritualInterpretation": "ponte entre reinos",
+    "transformationPotential": ["cajado vivo", "canalizador animado", "totem de convocação"],
+    "lootRarity": "épico"
+  }
+]
