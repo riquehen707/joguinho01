@@ -83,7 +83,7 @@ function starterSkillPoolIds() {
 }
 
 function starterItemPoolIds() {
-  return ITEMS.filter((i) => i.starter && i.tipo !== "material" && i.tipo !== "consumivel").map((i) => i.id);
+  return ITEM_CATALOG.filter((i) => i.starter && i.tipo !== "material" && i.tipo !== "consumivel").map((i) => i.id);
 }
 
 function transformSkillsForPlayer(player: Player, skills: Skill[]): Skill[] {
