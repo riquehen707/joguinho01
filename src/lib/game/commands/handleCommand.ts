@@ -11,6 +11,11 @@ import { fetchGlobalChat, listPresence, publishGlobalChat } from "../state/prese
 import { getSkill } from "../data/skills";
 import { ITEMS as ITEM_CATALOG } from "../data/items";
 
+function classSkillIds(classId: string): string[] {
+  const cls = BASE_CLASSES.find((c) => c.id === classId);
+  return cls?.habilidades ?? [];
+}
+
 type HandleInput = {
   command: string;
   player: Player;
