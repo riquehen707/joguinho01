@@ -8,7 +8,7 @@ import { RACES } from "@/lib/game/data/races";
 import { BASE_CLASSES } from "@/lib/game/data/classes";
 import { EQUIP_SKILLS } from "@/lib/game/data/equipSkills";
 import { ITEMS } from "@/lib/game/data/items";
-import { SKILLS } from "@/lib/game/data/skills";
+import { SKILLS, getSkill } from "@/lib/game/data/skills";
 
 type ApiResponse = {
   playerId: string;
@@ -553,7 +553,7 @@ const selectStyle: React.CSSProperties = {
 
 function resolveAvailableSkills(player: Player): Skill[] {
   const classe = BASE_CLASSES.find((c) => c.id === player.classeBase);
-  const classSkills = classe?.habilidades ?? [];
+  const classSkills = (classe?.habilidades ?? []).map((id) => getSkill(id)).filter(Boolean) as Skill[];
   const equipSkills: Skill[] = [];
   const slots: ItemSlot[] = ["arma", "armadura", "trinket"];
   for (const slot of slots) {
