@@ -1,0 +1,103 @@
+import { BaseClass } from "../types";
+
+export const BASE_CLASSES: BaseClass[] = [
+  {
+    id: "vanguarda",
+    nome: "Vanguarda Errante",
+    descricao: "Lutador adaptavel que equilibra armadura e mobilidade.",
+    foco: ["forca", "vigor"],
+    bonus: { forca: 1, vigor: 1 },
+    perks: [
+      "Comeca com bonus leve de peso suportado",
+      "Descanso recupera um pouco mais de estamina",
+    ],
+    habilidades: [
+      {
+        id: "golpe_pesado",
+        nome: "Golpe Pesado",
+        descricao: "Ataque de alto impacto que consome mais estamina.",
+        custoStamina: 8,
+        baseDano: [6, 10],
+        escala: { forca: 0.8, vigor: 0.2 },
+        tags: ["fisico"],
+        requerAlvo: true,
+      },
+      {
+        id: "postura_defensiva",
+        nome: "Postura Defensiva",
+        descricao: "Ganha escudo temporario e reduz dano no proximo golpe.",
+        custoStamina: 5,
+        baseDano: [0, 0],
+        escala: {},
+        tags: ["escudo"],
+        requerAlvo: false,
+      },
+    ],
+  },
+  {
+    id: "teurgo",
+    nome: "Teurgo Obscuro",
+    descricao: "Canaliza focos arcanos e invoca efeitos persistentes.",
+    foco: ["mente", "foco"],
+    bonus: { mente: 2 },
+    perks: [
+      "Gasta menos estamina em habilidades ativas",
+      "Pode estabilizar essencias incompativeis uma vez por dia",
+    ],
+    habilidades: [
+      {
+        id: "raio_runico",
+        nome: "Raio Rúnico",
+        descricao: "Dano a distancia escalado por mente/foco.",
+        custoStamina: 7,
+        baseDano: [5, 9],
+        escala: { mente: 0.7, foco: 0.5 },
+        tags: ["arcano"],
+        requerAlvo: true,
+      },
+      {
+        id: "selo_sombras",
+        nome: "Selo de Sombras",
+        descricao: "Aplica debuff que reduz dano do alvo.",
+        custoStamina: 6,
+        baseDano: [0, 0],
+        escala: {},
+        tags: ["debuff"],
+        requerAlvo: true,
+      },
+    ],
+  },
+  {
+    id: "artifice",
+    nome: "Artifice Errante",
+    descricao: "Especialista em gadgets, armadilhas e drones improvisados.",
+    foco: ["agilidade", "foco"],
+    bonus: { agilidade: 1, foco: 1 },
+    perks: [
+      "Crafting inicial liberado sem bancada",
+      "Drones improvisados ajudam a detectar salas secretas",
+    ],
+    habilidades: [
+      {
+        id: "armadilha_relampago",
+        nome: "Armadilha de Choque",
+        descricao: "Armadilha que causa dano eletrico e reduz estamina do alvo.",
+        custoStamina: 6,
+        baseDano: [4, 7],
+        escala: { foco: 0.4, agilidade: 0.3 },
+        tags: ["choque", "debuff"],
+        requerAlvo: true,
+      },
+      {
+        id: "pulso_drone",
+        nome: "Pulso de Drone",
+        descricao: "Ordem para drone atacar, consumindo carga.",
+        custoStamina: 4,
+        baseDano: [3, 5],
+        escala: { foco: 0.2 },
+        tags: ["drone"],
+        requerAlvo: true,
+      },
+    ],
+  },
+];
