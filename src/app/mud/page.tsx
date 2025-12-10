@@ -21,7 +21,7 @@ type ApiResponse = {
 };
 
 const storageKey = "mud-player-id";
-type Tab = "log" | "sala" | "inv" | "ess" | "map" | "status" | "chat";
+type Tab = "log" | "sala" | "inv" | "ess" | "map" | "status" | "chat" | "skills";
 
 export default function MudPage() {
   const [playerId, setPlayerId] = useState<string | null>(null);
