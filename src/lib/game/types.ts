@@ -34,6 +34,7 @@ export interface Item {
   tipo: ItemType;
   raridade: Rarity;
   peso: number;
+  starter?: boolean;
   afinidades?: Attribute[];
   sockets?: number;
   efeitos: string[];
@@ -78,8 +79,11 @@ export interface BaseClass {
   descricao: string;
   foco: Attribute[];
   bonus: Partial<Record<Attribute, number>>;
+  malus?: Partial<Record<Attribute, number>>;
+  subBonus?: Partial<Record<SubAttribute, number>>;
+  subMalus?: Partial<Record<SubAttribute, number>>;
   perks: string[];
-  habilidades: Skill[];
+  habilidades: string[]; // ids de habilidades base
 }
 
 export interface Race {
@@ -179,6 +183,7 @@ export interface Player {
   lockedIdentity?: boolean;
   skillsDesbloqueadas?: string[];
   lastActionAt?: number;
+  skillCooldowns?: Record<string, number>;
   localizacao: string;
   stats: Stats;
   hp: number;
@@ -190,6 +195,8 @@ export interface Player {
   slotsEssencia: number;
   revelados: string[]; // ids de salas secretas ja percebidas
   visitados?: string[]; // ids de salas visitadas
+  ultimaMorte?: string | null;
+  starterEscolhido?: boolean;
 }
 
 export interface MobInstance {
@@ -197,6 +204,8 @@ export interface MobInstance {
   mobId: string;
   hp: number;
   alive: boolean;
+  power?: number; // bonus por equipar loot de jogador
+  conditions?: Record<StatusId, number>;
 }
 
 export interface RoomState {
@@ -204,6 +213,7 @@ export interface RoomState {
   mobs: MobInstance[];
   lastUpdated: number;
   loot?: InventoryItem[];
+  deathCount?: number;
 }
 
 export interface Skill {
@@ -215,7 +225,33 @@ export interface Skill {
   escala: Partial<Record<Attribute, number>>; // multiplicador por atributo
   tags?: string[];
   requerAlvo?: boolean;
+  cooldownMs?: number;
+  categoria?: "ataque" | "defesa" | "suporte" | "invocacao" | "controle";
+  raridade?: Rarity;
+  starterPool?: boolean; // elegivel para escolha inicial
+  variantes?: Array<{
+    lineage?: LineageId;
+    race?: string;
+    mutateTo: string; // skillId de destino
+    descricaoExtra?: string;
+  }>;
+  aplica?: Array<{
+    efeito: StatusId;
+    duracao: number;
+    chance?: number; // 0-1
+    alvo?: "alvo" | "self";
+  }>;
 }
+
+export type StatusId =
+  | "veneno"
+  | "sangramento"
+  | "medo"
+  | "atordoado"
+  | "congelado"
+  | "enfraquecido"
+  | "silenciado"
+  | "lento";
 
 export interface CommandResult {
   log: string[];
@@ -223,4 +259,6 @@ export interface CommandResult {
   room?: Room;
   roomState?: RoomState;
   world?: Pick<WorldState, "salaInicial" | "seed" | "versao">;
+  chatMessages?: string[];
+  presence?: { id: string; nome: string }[];
 }

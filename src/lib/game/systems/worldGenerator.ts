@@ -50,6 +50,15 @@ function createRoom(id: string, biomeId: string, tipo: RoomType, dificuldade: nu
   };
 }
 
+const BIOME_LINKS: Record<string, string[]> = {
+  cripta: ["biblioteca", "pantano"],
+  pantano: ["cripta", "deserto_espectral"],
+  biblioteca: ["cripta", "fissura_abissal"],
+  fissura_abissal: ["biblioteca", "forja_tecnomantica"],
+  deserto_espectral: ["pantano", "forja_tecnomantica"],
+  forja_tecnomantica: ["fissura_abissal", "deserto_espectral"],
+};
+
 export function generateWorld(seed: string, versao = "v1"): WorldState {
   const baseSeed = hashSeed(seed || "mud-seed");
   const rng = mulberry32(baseSeed);
@@ -94,14 +103,14 @@ export function generateWorld(seed: string, versao = "v1"): WorldState {
     }
   }
 
-  // portais raros entre biomas
+  // conexoes entre biomas respeitando proximidade de tom/tier
   for (const room of rooms) {
-    if (rng() > 0.7) {
-      const others = rooms.filter((r) => r.biome !== room.biome && r.id !== "sala_inicial");
-      if (others.length) {
-        const target = pick(others, rng);
-        addConnection(room, target, `portal_${room.id}_${target.id}`);
-      }
+    if (room.id === "sala_inicial") continue;
+    const allowed = BIOME_LINKS[room.biome] ?? [];
+    const candidates = rooms.filter((r) => allowed.includes(r.biome) && r.id !== room.id);
+    if (candidates.length && rng() > 0.4) {
+      const target = pick(candidates, rng);
+      addConnection(room, target, `trilha_${room.id}_${target.id}`);
     }
   }
 

@@ -1,6 +1,8 @@
 import { getItem } from "../state/itemCatalog";
 import { getMob } from "../state/mobCatalog";
-import { MobInstance, Player, Room, RoomState } from "../types";
+import { MobInstance, Player, Room, RoomState, StatusId } from "../types";
+import { getSkill } from "../data/skills";
+import { MOBS } from "../data/mobs";
 
 function rand(min: number, max: number) {
   return Math.floor(Math.random() * (max - min + 1)) + min;
@@ -63,6 +65,7 @@ function computeMods(player: Player, roomState: RoomState): CombatMods {
   const has = (id: string) => player.passivas.includes(id);
   const hasEss = (id: string) => player.essencias.includes(id);
   const mobsAlive = roomState.mobs.filter((m) => m.alive).length;
+  const pesoExtra = weightPenalty(player).custoExtra;
 
   if (has("instinto_predador")) mods.damageMult += 0.1;
   if (has("danca_da_lamina")) {
@@ -99,6 +102,13 @@ function computeMods(player: Player, roomState: RoomState): CombatMods {
     if ((player.status?.droneCharges ?? 0) > 0) mods.dronePulse = 3;
   }
 
+  // Penalidade por carga/peso excedente
+  if (pesoExtra > 0) {
+    mods.staminaMod += pesoExtra;
+    mods.damageMult = Math.max(0.8, mods.damageMult - Math.min(0.15, pesoExtra * 0.03));
+    mods.skipCounterChance = Math.max(0, mods.skipCounterChance - 0.05);
+  }
+
   // Corrupcao penaliza
   if (player.corrupcao >= 40) {
     mods.damageMult *= 0.95;
@@ -110,6 +120,45 @@ function computeMods(player: Player, roomState: RoomState): CombatMods {
   }
 
   return mods;
+}
+
+function applyCondition(target: { conditions?: Record<StatusId, number> }, effect: StatusId, duracao: number) {
+  if (!target.conditions) target.conditions = {} as Record<StatusId, number>;
+  const current = target.conditions[effect] ?? 0;
+  target.conditions[effect] = Math.max(current, duracao);
+}
+
+function tickConditionsOnMob(mobInstance: MobInstance, log: string[]) {
+  if (!mobInstance.conditions) return;
+  let dot = 0;
+  const conds = mobInstance.conditions;
+  if (conds.veneno && conds.veneno > 0) dot += 2;
+  if (conds.sangramento && conds.sangramento > 0) dot += 2;
+  if (dot > 0) {
+    mobInstance.hp = Math.max(0, mobInstance.hp - dot);
+    log.push(`Efeitos continuos ferem ${mobInstance.id} em ${dot}.`);
+    if (mobInstance.hp <= 0) mobInstance.alive = false;
+  }
+  for (const k of Object.keys(conds) as StatusId[]) {
+    if (conds[k] > 0) conds[k] -= 1;
+    if (conds[k] <= 0) delete conds[k];
+  }
+}
+
+function tickConditionsOnPlayer(player: Player, log: string[]) {
+  if (!player.conditions) return;
+  let dot = 0;
+  const conds = player.conditions;
+  if (conds.veneno && conds.veneno > 0) dot += 2;
+  if (conds.sangramento && conds.sangramento > 0) dot += 2;
+  if (dot > 0) {
+    player.hp = Math.max(0, player.hp - dot);
+    log.push(`Efeitos continuos causam ${dot} de dano em voce.`);
+  }
+  for (const k of Object.keys(conds) as StatusId[]) {
+    if (conds[k] > 0) conds[k] -= 1;
+    if (conds[k] <= 0) delete conds[k];
+  }
 }
 
 export function performAttack(player: Player, room: Room, roomState: RoomState) {
@@ -143,6 +192,10 @@ export function performSkill(player: Player, room: Room, roomState: RoomState, o
   const mobData = getMob(target.mobId);
   const { custoExtra } = weightPenalty(player);
   const mods = computeMods(player, roomState);
+  // silence/debuff conditions on player
+  if (player.conditions?.silenciado) mods.damageMult *= 0.9;
+  if (player.conditions?.enfraquecido) mods.damageMult *= 0.9;
+  if (player.conditions?.lento) mods.staminaMod += 1;
 
   const baseMin =
     (opts.skillBase?.[0] ?? 4) + player.stats.atributos.forca * 0.6 + player.stats.atributos.agilidade * 0.3;
@@ -190,7 +243,7 @@ export function performSkill(player: Player, room: Room, roomState: RoomState, o
 
   if (target.alive && mobData) {
     const droneCharges = player.status?.droneCharges ?? 0;
-    if (droneCharges > 0 && player.essencias.includes("nucleo_tecnomantico")) {
+    if (droneCharges > 0 && player.lineage === "tecnologica") {
       log.push("Seu drone intercepta o contra-ataque inimigo.");
       player.status = { ...(player.status ?? { shield: 0, droneCharges: 0 }), droneCharges: droneCharges - 1 };
     } else if (Math.random() < mods.skipCounterChance) {
@@ -239,6 +292,49 @@ export function performSkill(player: Player, room: Room, roomState: RoomState, o
     log.push(`Eco vital: recupera ${player.hp - before} HP ao matar.`);
   }
 
+  // aplica efeitos de status da skill
+  if (opts.skillId) {
+    const skillMeta = getSkill(opts.skillId);
+    if (skillMeta?.aplica) {
+      for (const ap of skillMeta.aplica) {
+        if (ap.chance && Math.random() > ap.chance) continue;
+        if (ap.alvo === "self") applyCondition(player, ap.efeito, ap.duracao);
+        else applyCondition(target, ap.efeito, ap.duracao);
+      }
+    }
+  }
+
+  // efeitos especiais por skillId
+  if (opts.skillId === "postura_defensiva") {
+    const shield = Math.floor(4 + player.stats.atributos.vigor * 0.3);
+    player.status = { ...(player.status ?? { shield: 0, droneCharges: 0 }), shield: shield + (player.status?.shield ?? 0) };
+    log.push(`Escudo temporario ganho: ${shield}.`);
+  }
+  if (opts.skillId === "escudo_arcano") {
+    const shield = Math.floor(5 + player.stats.atributos.foco * 0.5);
+    player.status = { ...(player.status ?? { shield: 0, droneCharges: 0 }), shield: shield + (player.status?.shield ?? 0) };
+    log.push(`Escudo arcano: +${shield}.`);
+  }
+  if (opts.skillId === "pulso_drone") {
+    if (player.lineage === "tecnologica" || player.classeBase === "artifice") {
+      const charges = (player.status?.droneCharges ?? 0) + 1;
+      player.status = { ...(player.status ?? { shield: 0, droneCharges: 0 }), droneCharges: charges };
+      log.push("Drone recarregado (+1 carga).");
+    } else {
+      log.push("Você nao possui afinidade para drones.");
+    }
+  }
+  if (opts.skillId === "invocar_constructo") {
+    if (player.lineage === "tecnologica" || player.classeBase === "artifice") {
+      const charges = (player.status?.droneCharges ?? 0) + 1;
+      const shield = 3;
+      player.status = { ...(player.status ?? { shield: 0, droneCharges: 0 }), droneCharges: charges, shield: (player.status?.shield ?? 0) + shield };
+      log.push("Constructo invocado: +1 carga de drone e escudo leve.");
+    } else {
+      log.push("Sem afinidade para constructos.");
+    }
+  }
+
   if (target.hp < 0) target.hp = 0;
 
   return { log, player, roomState, killed: target.alive ? null : target };
@@ -252,15 +348,147 @@ export function attemptFlee(player: Player, roomState: RoomState) {
   }
   const hasSteps = player.passivas.includes("passos_leves");
   const hasSand = player.essencias.includes("areia_sussurrante");
-  const chanceBase = 0.35 + player.stats.atributos.agilidade * 0.03 + player.stats.sub.velocAtaque * 0.02;
-  const chance = Math.min(0.95, chanceBase + (hasSteps ? 0.08 : 0) + (hasSand ? 0.05 : 0));
+  const mobsVivos = roomState.mobs.filter((m) => m.alive).length;
+  const pesoPenalty = weightPenalty(player).custoExtra;
+  const base = 0.35 + player.stats.atributos.agilidade * 0.03 + player.stats.sub.velocAtaque * 0.02;
+  const bonus = (hasSteps ? 0.08 : 0) + (hasSand ? 0.05 : 0);
+  const malus = Math.min(0.2, mobsVivos * 0.05) + pesoPenalty * 0.02 + (roomState.deathCount ?? 0) * 0.02;
+  const chance = Math.min(0.95, Math.max(0.05, base + bonus - malus));
   const roll = Math.random();
   if (roll < chance) {
-    log.push("Voce escapa correndo.");
+    const staminaCost = 4 + pesoPenalty;
+    player.stamina = Math.max(0, player.stamina - staminaCost);
+    log.push(`Voce escapa! Gasta ${staminaCost} de estamina.`);
     return { success: true, log };
   }
-  const retaliate = rand(3, 8);
-  player.hp = Math.max(0, player.hp - retaliate);
-  log.push(`Fuga falhou! Sofre ${retaliate} de dano ao tentar escapar.`);
+  // Falha: contra-ataque do mob mais perigoso
+  const target = pickTargetMob(roomState);
+  if (!target) {
+    log.push("Falha na fuga, mas nenhum inimigo reage.");
+    return { success: false, log };
+  }
+  const mob = getMob(target.mobId);
+  const retaliate = mob ? rand(mob.dano[0], mob.dano[1]) : rand(3, 8);
+  let dmg = retaliate;
+  if (mob?.role === "brute") dmg = Math.floor(dmg * 1.2);
+  if (mob?.role === "skirmisher") dmg = Math.floor(dmg * 1.1);
+  const shield = player.status?.shield ?? 0;
+  if (shield > 0) {
+    const absorb = Math.min(shield, dmg);
+    dmg -= absorb;
+    player.status = { ...(player.status ?? { shield: 0, droneCharges: 0 }), shield: shield - absorb };
+    log.push(`Escudo absorve ${absorb} do golpe enquanto voce tenta fugir.`);
+  }
+  player.hp = Math.max(0, player.hp - dmg);
+  log.push(`Fuga falhou! ${mob?.nome ?? "Inimigo"} atinge voce em ${dmg} de dano.`);
   return { success: false, log };
+}
+
+export function mobActionTick(player: Player, roomState: RoomState) {
+  const log: string[] = [];
+  tickConditionsOnPlayer(player, log);
+  const aliveMobs = roomState.mobs.filter((m) => m.alive);
+  if (!aliveMobs.length) return { log, player };
+
+  const dangerRamp = Math.min(2, roomState.deathCount ?? 0);
+  const actions = Math.min(aliveMobs.length, 1 + (aliveMobs.length > 1 ? 1 : 0) + dangerRamp);
+
+  const applyDamage = (dmg: number, source: string, ignoreShield = false) => {
+    const shield = player.status?.shield ?? 0;
+    if (!ignoreShield && shield > 0) {
+      const absorb = Math.min(shield, dmg);
+      dmg -= absorb;
+      player.status = { ...(player.status ?? { shield: 0, droneCharges: 0 }), shield: shield - absorb };
+      log.push(`Escudo absorve ${absorb} do ataque de ${source}.`);
+    }
+    player.hp = Math.max(0, player.hp - dmg);
+    log.push(`${source} causa ${dmg} de dano.`);
+    if (player.hp <= 0) {
+      log.push("Voce caiu!");
+      player.hp = 0;
+    }
+  };
+
+  for (let i = 0; i < actions; i++) {
+    const target = pickTargetMob(roomState);
+    if (!target || !target.alive) continue;
+    // efeitos continuos no mob
+    tickConditionsOnMob(target, log);
+    if (!target.alive) continue;
+    const mob = getMob(target.mobId);
+    if (!mob) continue;
+    const power = target.power ?? 0;
+
+    // Armadilha ambiente quando a sala acumula mortes
+    const trapChance = Math.min(0.25, (roomState.deathCount ?? 0) * 0.05);
+    if (Math.random() < trapChance) {
+      const trapDmg = rand(2, 5) + (roomState.deathCount ?? 0);
+      applyDamage(trapDmg, "Armadilha da sala");
+      continue;
+    }
+
+    // role-based behavior
+    if (target.conditions?.medo && Math.random() < 0.5) {
+      log.push(`${mob.nome} hesita tomado por medo.`);
+      continue;
+    }
+
+    if (mob.role === "support") {
+      const ally = roomState.mobs.find((m) => m.alive && m.hp < (getMob(m.mobId)?.hp ?? m.hp));
+      if (ally) {
+        const heal = rand(3, 7) + dangerRamp;
+        ally.hp += heal;
+        log.push(`${mob.nome} cura um aliado em ${heal} HP.`);
+        continue;
+      }
+    }
+    if (mob.role === "elite" && Math.random() < 0.35) {
+      const pierce = Math.random() < 0.4;
+      const buff = 1 + (power > 0 ? 0.2 : 0);
+      const dmg = Math.floor((rand(mob.dano[0], mob.dano[1]) + dangerRamp) * (1.1 + power * 0.1) * buff);
+      applyDamage(dmg, `${mob.nome} (investida)`, pierce);
+      if (pierce) log.push(`${mob.nome} ignora parte do seu escudo!`);
+      continue;
+    }
+    if (mob.role === "caster" && !target.conditions?.silenciado && Math.random() < 0.45) {
+      const debuff = rand(1, 3) + dangerRamp;
+      player.stamina = Math.max(0, player.stamina - debuff);
+      log.push(`${mob.nome} canaliza e drena ${debuff} de sua estamina.`);
+      continue;
+    }
+    if (mob.role === "skirmisher" && Math.random() < 0.25) {
+      const trapDmg = rand(2, 5) + dangerRamp;
+      applyDamage(trapDmg, `${mob.nome} (emboscada)`);
+      continue;
+    }
+
+    // atordoado ou congelado: perde ação
+    if (target.conditions?.atordoado || target.conditions?.congelado) {
+      log.push(`${mob.nome} está impedido de agir.`);
+      continue;
+    }
+
+    let dmg = rand(mob.dano[0], mob.dano[1]);
+    if (mob.role === "brute") dmg = Math.floor(dmg * 1.2);
+    if (mob.role === "caster") dmg = Math.floor(dmg * 1.1);
+    if (mob.role === "skirmisher" && Math.random() < 0.2) dmg = Math.floor(dmg * 1.3);
+    if (dangerRamp > 0) dmg = Math.floor(dmg * (1 + dangerRamp * 0.1));
+    if (power > 0) dmg = Math.floor(dmg * (1 + power * 0.15));
+    if (target.conditions?.enfraquecido) dmg = Math.floor(dmg * 0.85);
+    if (target.conditions?.lento) dmg = Math.floor(dmg * 0.9);
+
+    applyDamage(dmg, mob.nome);
+    // mobs aplicam condições baseadas em bioma/role
+    const roll = Math.random();
+    const biome = MOBS.find((m) => m.id === mob.id)?.biome ?? "";
+    if (mob.role === "skirmisher" && roll < 0.25) applyCondition(player, "sangramento", 2);
+    if (mob.role === "caster" && roll < 0.2) applyCondition(player, "silenciado", 1);
+    if (mob.role === "brute" && roll < 0.2) applyCondition(player, "atordoado", 1);
+    if (mob.role === "support" && roll < 0.25) applyCondition(player, "enfraquecido", 2);
+    if (mob.role === "elite" && roll < 0.2) applyCondition(player, "medo", 2);
+    if (biome === "pantano" && roll < 0.25) applyCondition(player, "veneno", 2);
+    if (biome === "fissura_abissal" && roll < 0.2) applyCondition(player, "medo", 2);
+    if (biome === "deserto_espectral" && roll < 0.2) applyCondition(player, "enfraquecido", 2);
+  }
+  return { log, player };
 }

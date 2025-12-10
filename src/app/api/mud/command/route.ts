@@ -4,6 +4,7 @@ import { getOrCreatePlayer, savePlayer } from "@/lib/game/state/playerState";
 import { loadRoomState, saveRoomState } from "@/lib/game/state/roomState";
 import { withRoomLock } from "@/lib/game/state/locks";
 import { getWorld } from "@/lib/game/state/worldState";
+import { touchPresence, listPresence, fetchGlobalChat } from "@/lib/game/state/presence";
 
 export async function POST(req: NextRequest) {
   try {
@@ -16,7 +17,7 @@ export async function POST(req: NextRequest) {
     const response = await withRoomLock(player.localizacao, 4000, async () => {
       let room = world.salas[player.localizacao];
       let roomState = await loadRoomState(room);
-      const result = handleCommand({
+      const result = await handleCommand({
         command: command ?? "",
         player,
         world,
@@ -34,14 +35,21 @@ export async function POST(req: NextRequest) {
       }
       await saveRoomState(roomState);
 
+      await touchPresence(player.id, player.localizacao, player.nome);
+
       return { result, room, roomState };
     });
+
+    const presence = await listPresence(player.localizacao);
+    const chatMessages = await fetchGlobalChat(10);
 
     return NextResponse.json({
       ...response.result,
       playerId: player.id,
       room: response.room,
       roomState: response.roomState,
+      presence,
+      chatMessages,
     });
   } catch (err) {
     console.error("Command error", err);
