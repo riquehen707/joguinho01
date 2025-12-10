@@ -1,0 +1,58 @@
+import { Essence } from "../types";
+
+export const ESSENCES: Essence[] = [
+  {
+    id: "eco_da_cripta",
+    nome: "Eco da Cripta",
+    origem: "cripta",
+    afinidade: ["sangue", "vigor"],
+    raridade: "raro",
+    efeito: "Ao matar inimigo recupera pequena quantidade de vida sombria.",
+    risco: "Chance de aplicar drenagem de luz na sala",
+  },
+  {
+    id: "toxina_pantano",
+    nome: "Toxina do Pantano",
+    origem: "pantano",
+    afinidade: ["forca", "vigor"],
+    raridade: "incomum",
+    efeito: "Ataques aplicam veneno leve em hordas.",
+    risco: "Pode reduzir percepcao enquanto ativa",
+  },
+  {
+    id: "manuscrito_vivo",
+    nome: "Manuscrito Vivo",
+    origem: "biblioteca",
+    afinidade: ["mente", "foco"],
+    raridade: "raro",
+    efeito: "Habilidades de cast custam 10% menos foco e ganham eco arcano.",
+    risco: "Pequena chance de auto-aplicar confusao ao conjurar",
+  },
+  {
+    id: "fenda_latente",
+    nome: "Fenda Latente",
+    origem: "fissura_abissal",
+    afinidade: ["sangue", "sorte"],
+    raridade: "epico",
+    efeito: "Abre mini-atalhos entre salas conectadas e causa dano de vazio em hordas.",
+    risco: "Corrupcao acumulada ao permanecer muito em sala comum",
+  },
+  {
+    id: "areia_sussurrante",
+    nome: "Areia Sussurrante",
+    origem: "deserto_espectral",
+    afinidade: ["agilidade", "sorte"],
+    raridade: "raro",
+    efeito: "Aumenta percepcao e chance de encontrar salas secretas.",
+    risco: "Cansa estamina ao canalizar",
+  },
+  {
+    id: "nucleo_tecnomantico",
+    nome: "Nucleo Tecnomantico",
+    origem: "forja_tecnomantica",
+    afinidade: ["foco", "agilidade"],
+    raridade: "epico",
+    efeito: "Permite invocar drone auxiliar que atrai fogo de inimigos.",
+    risco: "Pode causar choque eletrico ao ser instavel",
+  },
+];

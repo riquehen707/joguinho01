@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-require-imports */
 /* Custom Next.js server with WebSocket lobby for Orbe Arena */
 const { createServer } = require("http");
 const next = require("next");

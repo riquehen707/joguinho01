@@ -1,66 +1,21 @@
-// src/lib/game/state/worldState.ts
+import { generateWorld } from "../systems/worldGenerator";
+import { WorldState } from "../types";
+import { getRedis } from "./redisClient";
 
-export type RoomConnection = {
-  north?: string
-  south?: string
-  east?: string
-  west?: string
-  secret?: string
-}
+const WORLD_KEY = "mud:world:v1";
 
-export type RoomState = {
-  id: string
-  biome: string
-  danger: number
-  players: string[]
-  monsters: string[]
-  events: string[]
-  ambientTags: string[]
-  parentRegion?: string
-  connections: RoomConnection
-}
-
-export type RegionImpact = {
-  ambientEvent?: string
-  roomInfluence?: string[]
-  lineageBias?: string[]
-  moralShift?: "low" | "medium" | "high"
-  spawnSuppression?: boolean
-  spawnMutation?: boolean
-}
-
-export type WorldMemory = {
-  bossesKilled: string[]
-  ritualsPerformed: string[]
-  lineageStabilizations: number
-  narrativeMarks: string[]
-}
-
-export type WorldState = {
-  id: string
-  seed: string
-  buildVersion: string
-  createdAt: number
-  lastTickAt: number
-  rooms: Record<string, RoomState>
-  regionEffects: Record<string, RegionImpact>
-  memory: WorldMemory
-}
-
-export function createInitialWorldState(seed: string): WorldState {
-  return {
-    id: `world-${seed}`,
-    seed,
-    buildVersion: "1.0.0",
-    createdAt: Date.now(),
-    lastTickAt: Date.now(),
-    rooms: {},
-    regionEffects: {},
-    memory: {
-      bossesKilled: [],
-      ritualsPerformed: [],
-      lineageStabilizations: 0,
-      narrativeMarks: []
-    }
+export async function getWorld(): Promise<WorldState> {
+  const redis = await getRedis();
+  const cached = await redis.get(WORLD_KEY);
+  if (cached) {
+    return JSON.parse(cached) as WorldState;
   }
+  const world = generateWorld(WORLD_KEY, "v1");
+  await redis.set(WORLD_KEY, JSON.stringify(world));
+  return world;
+}
+
+export async function saveWorld(world: WorldState): Promise<void> {
+  const redis = await getRedis();
+  await redis.set(WORLD_KEY, JSON.stringify(world));
 }
