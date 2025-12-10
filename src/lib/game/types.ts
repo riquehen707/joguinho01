@@ -197,6 +197,7 @@ export interface Player {
   visitados?: string[]; // ids de salas visitadas
   ultimaMorte?: string | null;
   starterEscolhido?: boolean;
+  conditions?: Record<StatusId, number>;
 }
 
 export interface MobInstance {
