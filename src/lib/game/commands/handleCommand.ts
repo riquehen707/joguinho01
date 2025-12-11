@@ -10,6 +10,7 @@ import { EQUIP_SKILLS } from "../data/equipSkills";
 import { fetchGlobalChat, listPresence, publishGlobalChat } from "../state/presence";
 import { getSkill } from "../data/skills";
 import { ITEMS as ITEM_CATALOG } from "../data/items";
+import { parseUseSkill } from "../systems/parser";
 
 function classSkillIds(classId: string): string[] {
   const cls = BASE_CLASSES.find((c) => c.id === classId);
@@ -413,6 +414,12 @@ export async function handleCommand({ command, player, world, room, roomState }:
   };
   const verb = aliases[rawVerb.toLowerCase()] ?? rawVerb;
 
+  // parser narrativo para "usar <skill> <alvo?>"
+  const parsedUse = parseUseSkill(trimmed, availableSkills(player));
+  if (parsedUse) {
+    rest.splice(0, rest.length, parsedUse.skillId, ...(parsedUse.target ? [parsedUse.target] : []));
+  }
+
   if (verb === "chat") {
     const msg = rest.join(" ");
     if (!msg) {
@@ -637,7 +644,9 @@ export async function handleCommand({ command, player, world, room, roomState }:
         break;
       }
       const skillId = rest[0];
-      const skill = availableSkills(player).find((h) => h.id === skillId);
+      const skill = availableSkills(player).find(
+        (h) => h.id === skillId || h.nome.toLowerCase().includes(skillId.toLowerCase())
+      );
       if (!skill) {
         log.push("Skill nao encontrada ou indisponivel.");
         break;

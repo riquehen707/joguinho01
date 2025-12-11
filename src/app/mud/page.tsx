@@ -44,6 +44,7 @@ export default function MudPage() {
   const [starterSkillA, setStarterSkillA] = useState<string>("");
   const [starterSkillB, setStarterSkillB] = useState<string>("");
   const [starterItem, setStarterItem] = useState<string>("");
+  const [skillModalOpen, setSkillModalOpen] = useState(false);
 
   useEffect(() => {
     const saved = typeof window !== "undefined" ? localStorage.getItem(storageKey) : null;
@@ -58,6 +59,21 @@ export default function MudPage() {
 
   useEffect(() => {
     const t = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, []);
+
+  useEffect(() => {
+    const t = setInterval(async () => {
+      try {
+        const res = await fetch("/api/mud/chat");
+        if (res.ok) {
+          const data = (await res.json()) as { messages?: string[] };
+          if (data.messages) setChatLog(data.messages);
+        }
+      } catch {
+        // ignore
+      }
+    }, 6000);
     return () => clearInterval(t);
   }, []);
 
@@ -163,6 +179,9 @@ export default function MudPage() {
           </button>
           <button disabled={busy} onClick={() => quick("inventory")} style={btnStyleSecondary}>
             Inventario
+          </button>
+          <button disabled={busy} onClick={() => setSkillModalOpen(true)} style={btnStyleSecondary}>
+            Usar Habilidade
           </button>
           <button disabled={busy} onClick={() => quick("rest")} style={btnStyleSecondary}>
             Rest
@@ -492,6 +511,51 @@ export default function MudPage() {
                   Ver status
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {skillModalOpen && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.7)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: 16,
+            zIndex: 18,
+          }}
+        >
+          <div style={{ background: "#12121a", padding: 16, borderRadius: 12, border: "1px solid #242434", maxWidth: 720, width: "100%", color: "#cfd1d6" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+              <h3 style={{ margin: 0 }}>Usar habilidade</h3>
+              <button style={btnStyleSecondary} onClick={() => setSkillModalOpen(false)}>
+                Fechar
+              </button>
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 8 }}>
+              {player
+                ? resolveAvailableSkills(player).map((s) => (
+                    <div key={s.id} style={{ border: "1px solid #1f2432", borderRadius: 10, padding: 10, background: "#0f1118", display: "flex", flexDirection: "column", gap: 6 }}>
+                      <div style={{ fontWeight: 600 }}>{s.nome}</div>
+                      <div style={{ fontSize: 12, color: "#9fb2c8" }}>{s.tags?.join(", ") || "sem tags"}</div>
+                      <div style={{ fontSize: 13 }}>{s.descricao}</div>
+                      <div style={{ fontSize: 12, color: "#9fb2c8" }}>
+                        STA {s.custoStamina} | CD {s.cooldownMs ? `${Math.ceil(s.cooldownMs / 1000)}s` : "—"}
+                      </div>
+                      {s.aplica?.length ? (
+                        <div style={{ fontSize: 12, color: "#c499f7" }}>
+                          Aplica: {s.aplica.map((a) => `${a.efeito}(${a.duracao})${a.chance ? ` ${Math.round(a.chance * 100)}%` : ""}`).join(", ")}
+                        </div>
+                      ) : null}
+                      <button disabled={busy} style={btnStyleSecondary} onClick={() => quick(`useskill ${s.id}`)}>
+                        Usar
+                      </button>
+                    </div>
+                  ))
+                : "Carregando..."}
             </div>
           </div>
         </div>
