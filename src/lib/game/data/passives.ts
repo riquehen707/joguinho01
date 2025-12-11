@@ -129,4 +129,12 @@ export const PASSIVES: Passive[] = [
     afinidades: ["mente", "sangue"],
     tags: ["cosmico", "exploracao"],
   },
+  {
+    id: "reflexo_instintivo",
+    nome: "Reflexo Instintivo",
+    descricao: "Chance de esquivar ataques físicos e ganhar pequena janela de contra.",
+    raridade: "incomum",
+    afinidades: ["agilidade", "percepcao" as any],
+    tags: ["defesa", "reacao"],
+  },
 ];

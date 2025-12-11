@@ -45,6 +45,7 @@ type CombatMods = {
   dotDamage: number;
   healOnKill: number;
   dronePulse: number;
+  rangedBonus: number;
 };
 
 function computeMods(player: Player, roomState: RoomState): CombatMods {
@@ -61,6 +62,7 @@ function computeMods(player: Player, roomState: RoomState): CombatMods {
     dotDamage: 0,
     healOnKill: 0,
     dronePulse: 0,
+    rangedBonus: 0,
   };
   const has = (id: string) => player.passivas.includes(id);
   const hasEss = (id: string) => player.essencias.includes(id);
@@ -91,6 +93,10 @@ function computeMods(player: Player, roomState: RoomState): CombatMods {
     mods.elementDamage += 2;
     mods.elementType = "arcano";
     mods.staminaMod -= 1;
+  }
+  if (player.equipamento?.arma === "arco_rudimentar" || player.equipamento?.arma === "funda_singela") {
+    mods.rangedBonus += 0.1;
+    mods.skipCounterChance += 0.05;
   }
   if (hasEss("eco_da_cripta")) {
     mods.elementDamage += 2;
@@ -196,9 +202,15 @@ export function performSkill(player: Player, room: Room, roomState: RoomState, o
   if (player.conditions?.lento) mods.staminaMod += 1;
 
   const baseMin =
-    (opts.skillBase?.[0] ?? 4) + player.stats.atributos.forca * 0.6 + player.stats.atributos.agilidade * 0.3;
+    (opts.skillBase?.[0] ?? 4) +
+    player.stats.atributos.forca * 0.6 +
+    player.stats.atributos.agilidade * 0.3 +
+    (opts.tags?.includes("distancia") ? player.stats.atributos.sorte * mods.rangedBonus : 0);
   const baseMax =
-    (opts.skillBase?.[1] ?? 8) + player.stats.atributos.forca * 0.8 + player.stats.atributos.agilidade * 0.5;
+    (opts.skillBase?.[1] ?? 8) +
+    player.stats.atributos.forca * 0.8 +
+    player.stats.atributos.agilidade * 0.5 +
+    (opts.tags?.includes("distancia") ? player.stats.atributos.sorte * mods.rangedBonus : 0);
   const staminaBase = opts.skillCost ?? 6;
   const staminaCost = Math.max(
     4,
@@ -392,6 +404,16 @@ export function mobActionTick(player: Player, roomState: RoomState) {
   const actions = Math.min(aliveMobs.length, 1 + (aliveMobs.length > 1 ? 1 : 0) + dangerRamp);
 
   const applyDamage = (dmg: number, source: string, ignoreShield = false) => {
+    const dodgeChance =
+      0.05 +
+      player.stats.atributos.agilidade * 0.01 +
+      player.stats.sub.percepcao * 0.02 +
+      (player.passivas.includes("reflexo_instintivo") ? 0.08 : 0) +
+      (player.passivas.includes("danca_da_lamina") ? 0.02 : 0);
+    if (Math.random() < dodgeChance) {
+      log.push(`Reflexo: voce esquiva do ataque de ${source}.`);
+      return;
+    }
     const shield = player.status?.shield ?? 0;
     if (!ignoreShield && shield > 0) {
       const absorb = Math.min(shield, dmg);

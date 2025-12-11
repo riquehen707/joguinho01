@@ -156,6 +156,8 @@ function seedInventory(starterItem: Item | null): InventoryItem[] {
   const base: InventoryItem[] = [
     { itemId: "frasco_cura", qtd: 2 },
     { itemId: "pingente_oculto", qtd: 1 },
+    { itemId: "flecha_bruta", qtd: 8 },
+    { itemId: "faca_lancavel", qtd: 4 },
   ];
   // players agora escolhem item starter via comando/fluxo; se nao houver escolha, fica so o pingente + poções
   if (starterItem) {
@@ -194,8 +196,12 @@ function ensureDefaults(player: Player): Player {
   if (patched.starterEscolhido === undefined) {
     patched.starterEscolhido = true;
   }
+  if (!patched.recipesDescobertas) patched.recipesDescobertas = [];
+  if (!patched.arquetipos) patched.arquetipos = [];
+  if (patched.mutacao === undefined) patched.mutacao = null;
   if (!patched.lastActionAt) patched.lastActionAt = Date.now();
   if (!patched.skillCooldowns) patched.skillCooldowns = {};
   if (!patched.ultimaMorte) patched.ultimaMorte = null;
+  if (patched.masterRoom === undefined) patched.masterRoom = null;
   return patched;
 }

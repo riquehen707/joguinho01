@@ -1,6 +1,21 @@
 import { BIOMES, PASSIVES, BASE_CLASSES, ESSENCES } from "../data";
 import { getItem as fetchItem } from "../state/itemCatalog";
-import { Player, CommandResult, Room, RoomState, WorldState, ItemSlot, InventoryItem, DropEntry, Skill } from "../types";
+import {
+  Player,
+  CommandResult,
+  Room,
+  RoomState,
+  WorldState,
+  ItemSlot,
+  InventoryItem,
+  DropEntry,
+  Skill,
+  TomeOption,
+  Attribute,
+  AnomalyType,
+  Anomaly,
+  StatusId,
+} from "../types";
 import { attemptFlee, performSkill, mobActionTick } from "../systems/combat";
 import { MOBS } from "../data/mobs";
 import { LINEAGES } from "../data/lineages";
@@ -8,9 +23,13 @@ import { RACES } from "../data/races";
 import { applyIdentity } from "../state/playerState";
 import { EQUIP_SKILLS } from "../data/equipSkills";
 import { fetchGlobalChat, listPresence, publishGlobalChat } from "../state/presence";
-import { getSkill } from "../data/skills";
+import { getSkill, SKILLS } from "../data/skills";
 import { ITEMS as ITEM_CATALOG } from "../data/items";
 import { parseUseSkill } from "../systems/parser";
+import { RECIPES } from "../data/recipes";
+import { ARCHETYPES } from "../data/archetypes";
+import { MUTATIONS } from "../data/mutations";
+import crypto from "crypto";
 
 function classSkillIds(classId: string): string[] {
   const cls = BASE_CLASSES.find((c) => c.id === classId);
@@ -43,6 +62,14 @@ function describeRoom(room: Room, player: Player, roomState: RoomState): string[
   if (roomState.loot && roomState.loot.length) {
     visible.push(`Loot no chao (livre para qualquer jogador): ${roomState.loot.map((l) => `${l.itemId} x${l.qtd}`).join(", ")}`);
   }
+  const deadMobs = roomState.mobs.filter((m) => !m.alive);
+  if (deadMobs.length) {
+    const corpses = deadMobs
+      .map((m) => MOBS.find((mm) => mm.id === m.mobId)?.nome ?? m.mobId)
+      .slice(0, 3)
+      .join(", ");
+    visible.push(`Voce ve corpos: ${corpses}${deadMobs.length > 3 ? "..." : ""}`);
+  }
   if (player.ultimaMorte && player.ultimaMorte === room.id) {
     visible.push("Marcas da sua morte anterior ainda estao aqui.");
   }
@@ -54,6 +81,17 @@ function describeRoom(room: Room, player: Player, roomState: RoomState): string[
       .join(" | ") || "nenhum"}`
   );
   return visible;
+}
+
+function ensureAnomaly(room: Room, roomState: RoomState) {
+  if (roomState.anomalies && roomState.anomalies.length) return;
+  // chance pequena
+  const chance = room.tipo === "desafio" ? 0.2 : 0.1;
+  if (Math.random() > chance) return;
+  const possible: AnomalyType[] = ["estatua_deusa", "parasita_abissal", "rio_misterioso"];
+  const tipo = possible[Math.floor(Math.random() * possible.length)];
+  const anom: Anomaly = { id: crypto.randomUUID(), tipo, resolvida: false };
+  roomState.anomalies = [anom];
 }
 
 function formatMobs(roomState: RoomState, player: Player): string {
@@ -68,6 +106,32 @@ function formatMobs(roomState: RoomState, player: Player): string {
     return `${mark}${idx + 1}:${mob?.nome ?? m.mobId} HP:${Math.max(0, m.hp)}${saque}`;
   });
   return `Inimigos: ${lines.join(" | ")}`;
+}
+
+function resolveTarget(roomState: RoomState, arg?: string): string | null {
+  const alive = roomState.mobs.filter((m) => m.alive);
+  if (!alive.length) return null;
+  if (!arg) return alive.length === 1 ? alive[0].id : null;
+
+  // por id direto
+  const direct = alive.find((m) => m.id === arg);
+  if (direct) return direct.id;
+
+  // por indice
+  const idx = parseInt(arg, 10);
+  if (!Number.isNaN(idx) && idx > 0 && idx <= alive.length) {
+    return alive[idx - 1].id;
+  }
+
+  // por nome parcial do mob
+  const matches = alive.filter((m) => {
+    const meta = MOBS.find((mm) => mm.id === m.mobId);
+    const name = meta?.nome?.toLowerCase() ?? "";
+    return name.includes(arg.toLowerCase()) || m.mobId.toLowerCase().includes(arg.toLowerCase());
+  });
+  if (matches.length === 1) return matches[0].id;
+
+  return null;
 }
 
 function availableSkills(player: Player): Skill[] {
@@ -85,7 +149,25 @@ function availableSkills(player: Player): Skill[] {
 }
 
 function starterSkillPoolIds() {
-  return (["cutilada", "bloqueio", "investida", "finta", "golpe_duplo", "arremesso_faca", "chute_baixo", "golpe_circular", "tiro_pedra", "tiro_rapido", "bash_escudo", "cajado_golpe"] as string[]).filter((id) => !!getSkill(id));
+  const equipSkillIds = new Set(Object.values(EQUIP_SKILLS).map((s) => s.id));
+  return (
+    [
+      "cutilada",
+      "bloqueio",
+      "investida",
+      "finta",
+      "golpe_duplo",
+      "arremesso_faca",
+      "chute_baixo",
+      "golpe_circular",
+      "tiro_pedra",
+      "tiro_rapido",
+      "bash_escudo",
+      "cajado_golpe",
+    ] as string[]
+  )
+    .filter((id) => !!getSkill(id))
+    .filter((id) => !equipSkillIds.has(id)); // evita skills vindas de item no starter
 }
 
 function starterItemPoolIds() {
@@ -129,9 +211,12 @@ function deriveArquetipo(player: Player): string {
   if (arma === "cajado_simples" || hasTag("arcano")) tags.push("conjurador");
   if (arma === "martelo_pesado" || arma === "clava_crua" || arma === "espada_enferrujada" || hasTag("fisico")) tags.push("brutamonte");
   if (armadura === "escudo_improvisado" || hasTag("defesa") || hasTag("controle")) tags.push("guardiao");
-  if (lineage === "tecnologica" || hasTag("choque")) tags.push("tecno");
+  if (lineage === "tecnologica" || hasTag("choque") || hasTag("drone")) tags.push("tecno");
   if (lineage === "cosmica" || hasTag("arcano")) tags.push("runico");
+  if (hasTag("veneno")) tags.push("venenista");
   if (ess.has("fenda_latente") || hasTag("sombrio")) tags.push("corrompido");
+  // arquétipos desbloqueados
+  if (player.arquetipos?.length) tags.push(...player.arquetipos);
   if (!tags.length) return "errante";
   return tags.join(" ");
 }
@@ -177,9 +262,9 @@ function handleDeath(player: Player, roomState: RoomState, world: WorldState, lo
   const dropCount = Math.ceil(player.inventario.length / 2);
   const dropped = player.inventario.slice(0, dropCount);
   for (const item of dropped) {
-    const existing = loot.find((l) => l.itemId === item.itemId);
+    const existing = loot.find((l) => l.itemId === item.itemId && l.ownerId === player.id);
     if (existing) existing.qtd += item.qtd;
-    else loot.push({ ...item });
+    else loot.push({ ...item, ownerId: player.id });
   }
   roomState.loot = loot;
   roomState.deathCount = (roomState.deathCount ?? 0) + 1;
@@ -208,8 +293,9 @@ function trackDiscovery(player: Player, room: Room, roomState: RoomState | null,
   }
 }
 
-function xpNeededFor(level: number) {
-  return 3 + level;
+function xpNeededFor(_level: number) {
+  // preferimos um ritmo fixo de 5 XP por nível
+  return 5;
 }
 
 function levelUpIfNeeded(player: Player, log: string[]) {
@@ -225,6 +311,25 @@ function levelUpIfNeeded(player: Player, log: string[]) {
       log.push("Seu nucleo reativa um drone ao subir de nivel.");
     }
     log.push(`Level up! Nivel ${player.nivel}. Slot de essencia +1, pontos disponiveis +1.`);
+    // gerar escolhas de tomos (3 opções) com +1/-1 atributos
+    const tomos: TomeOption[] = [];
+    const attrs: Attribute[] = ["forca", "agilidade", "vigor", "mente", "sorte", "sangue", "foco"];
+    for (let i = 0; i < 3; i++) {
+      const bonusAttr = attrs[Math.floor(Math.random() * attrs.length)];
+      let malusAttr = attrs[Math.floor(Math.random() * attrs.length)];
+      if (malusAttr === bonusAttr) {
+        malusAttr = attrs[(attrs.indexOf(bonusAttr) + 1) % attrs.length];
+      }
+      tomos.push({
+        id: `tomo_${player.nivel}_${i}_${Date.now()}`,
+        bonus: { [bonusAttr]: 1 } as Partial<Record<Attribute, number>>,
+        malus: { [malusAttr]: -1 } as Partial<Record<Attribute, number>>,
+        desc: `+1 ${bonusAttr}, -1 ${malusAttr}`,
+      });
+    }
+    player.pendingTomes = tomos;
+    log.push("Voce ganhou um Tomo de Caracteristicas. Escolha um com 'tomo <id>':");
+    tomos.forEach((t) => log.push(`${t.id}: ${t.desc}`));
   }
 }
 
@@ -275,6 +380,106 @@ function handleEssences(player: Player): string[] {
     const e = ESSENCES.find((ee) => ee.id === id);
     return e ? `${e.nome} (${e.raridade}) - ${e.efeito}` : id;
   });
+}
+
+function handleBestiary(player: Player): string[] {
+  const lines: string[] = [];
+  lines.push(`Mobs vistos (${player.catalogo.mobsVistos.length}): ${player.catalogo.mobsVistos.join(", ") || "nenhum"}`);
+  lines.push(`Mobs derrotados (${player.catalogo.mobsDerrotados.length}): ${player.catalogo.mobsDerrotados.join(", ") || "nenhum"}`);
+  if (!player.catalogo.mobsVistos.length && !player.catalogo.mobsDerrotados.length) {
+    lines.push("Explore biomas para registrar criaturas.");
+  }
+  return lines;
+}
+
+function handleCatalogo(kind: string): string[] {
+  switch (kind) {
+    case "classes":
+      return BASE_CLASSES.map((c) => `${c.id}: ${c.nome} -> ${c.habilidades.join(", ")}`);
+    case "skills":
+      return SKILLS.map((s) => `${s.id}: ${s.nome} (${s.categoria ?? "geral"}/${s.raridade ?? "comum"})`);
+    case "itens":
+      return ITEM_CATALOG.map((i) => `${i.id}: ${i.nome} (${i.tipo}/${i.raridade})`);
+    case "essencias":
+      return ESSENCES.map((e) => `${e.id}: ${e.nome} (${e.raridade})`);
+    default:
+      return ["Use catalogo classes|skills|itens|essencias"];
+  }
+}
+
+function handleAnomalyAction(player: Player, room: Room, roomState: RoomState, log: string[], anomalyId: string, opcao: string) {
+  const anomaly = roomState.anomalies?.find((a) => a.id === anomalyId && !a.resolvida);
+  if (!anomaly) {
+    log.push("Nenhuma anomalia correspondente ou ja resolvida.");
+    return;
+  }
+  switch (anomaly.tipo) {
+    case "estatua_deusa": {
+      if (opcao === "orar") {
+        const bless = Math.random() < 0.6;
+        if (bless) {
+          player.stats.atributos.sorte += 1;
+          player.passivas.push("manto_espectral");
+          log.push("Uma luz envolve voce. Sorte +1 e uma bençao espectral emerge.");
+        } else {
+          player.corrupcao = Math.min(100, player.corrupcao + 5);
+          log.push("A deusa silencia. Voce sente um arrepio (corrupcao +5).");
+        }
+      } else if (opcao === "quebrar") {
+        const drop = Math.random() < 0.5 ? "essencia_dungeon" : "parasita_abissal";
+        addToInventory(player, { itemId: drop, qtd: 1 });
+        log.push(`A estatua se despedaça. Dentro havia ${drop}.`);
+        player.corrupcao = Math.min(100, player.corrupcao + 3);
+      } else {
+        log.push("Voce ignora a estatua. Nada acontece.");
+      }
+      anomaly.resolvida = true;
+      break;
+    }
+    case "parasita_abissal": {
+      if (opcao === "guardar") {
+        addToInventory(player, { itemId: "parasita_abissal", qtd: 1 });
+        log.push("Voce guarda o parasita em um frasco.");
+      } else if (opcao === "inserir") {
+        player.essencias.push("fenda_latente");
+        player.corrupcao = Math.min(100, player.corrupcao + 10);
+        log.push("O parasita se funde ao seu corpo... Corrupcao aumenta, mas algo desperta (essencia fenda_latente).");
+      } else if (opcao === "destruir") {
+        player.ouro += 10;
+        log.push("Parasita destruido. Voce coleta partes vendaveis (ouro +10).");
+      }
+      anomaly.resolvida = true;
+      break;
+    }
+    case "rio_misterioso": {
+      if (opcao === "beber") {
+        const good = Math.random() < 0.5;
+        if (good) {
+          player.stats.atributos.vigor += 1;
+          log.push("A agua renova suas forcas (vigor +1).");
+        } else {
+          const cond = player.conditions ?? ({} as Record<StatusId, number>);
+          cond.veneno = Math.max(cond.veneno ?? 0, 2);
+          player.conditions = cond;
+          log.push("A agua estava contaminada. Voce se sente envenenado.");
+        }
+      } else if (opcao === "pescar") {
+        const found = Math.random() < 0.4;
+        if (found) {
+          addToInventory(player, { itemId: "fragmento_miragem", qtd: 1 });
+          log.push("Algo brilha na agua: fragmento de miragem encontrado.");
+        } else {
+          log.push("Nada fisgado, apenas silencio das aguas.");
+        }
+      } else {
+        log.push("Voce observa o rio e segue adiante.");
+      }
+      anomaly.resolvida = true;
+      break;
+    }
+    default:
+      log.push("Nada acontece.");
+  }
 }
 
 function listSkills(player: Player): string[] {
@@ -329,6 +534,28 @@ function addToInventory(player: Player, drop: InventoryItem) {
   }
 }
 
+const SKILL_AMMO: Record<string, { ammoId: string; qtd: number }> = {
+  tiro_arco: { ammoId: "flecha_bruta", qtd: 1 },
+  tiro_rapido: { ammoId: "flecha_bruta", qtd: 1 },
+  tiro_runico: { ammoId: "flecha_bruta", qtd: 1 },
+  flecha_envenenada: { ammoId: "flecha_bruta", qtd: 1 },
+  chuva_flechas: { ammoId: "flecha_bruta", qtd: 3 },
+  arremesso_faca: { ammoId: "faca_lancavel", qtd: 1 },
+};
+
+function consumeAmmo(player: Player, skillId: string): { ok: boolean; ammoId?: string; need?: number } {
+  const entry = SKILL_AMMO[skillId];
+  if (!entry) return { ok: true };
+  const { ammoId, qtd } = entry;
+  const stack = player.inventario.find((i) => i.itemId === ammoId && i.qtd >= qtd);
+  if (!stack) return { ok: false, ammoId, need: qtd };
+  stack.qtd -= qtd;
+  if (stack.qtd <= 0) {
+    player.inventario = player.inventario.filter((i) => i.qtd > 0);
+  }
+  return { ok: true, ammoId };
+}
+
 function spendMaterial(player: Player, options: string[], qtd = 1): { ok: boolean; used?: string } {
   for (const opt of options) {
     const stack = player.inventario.find((i) => i.itemId === opt && i.qtd >= qtd);
@@ -341,6 +568,49 @@ function spendMaterial(player: Player, options: string[], qtd = 1): { ok: boolea
     }
   }
   return { ok: false };
+}
+
+function craftItem(player: Player, target: string, log: string[]): boolean {
+  const recipe = RECIPES.find((r) => r.id === target);
+  if (!recipe) {
+    log.push("Receita desconhecida. Use 'craft help' ou 'pesquisar <item>'.");
+    return false;
+  }
+  if (recipe.requisitoPassiva && !player.passivas.includes(recipe.requisitoPassiva)) {
+    log.push("Voce nao possui a passiva necessaria para esta receita.");
+    return false;
+  }
+  if (recipe.requisitoLinhagem && player.lineage !== recipe.requisitoLinhagem) {
+    log.push("Sua linhagem nao permite esta receita.");
+    return false;
+  }
+  // checa materiais
+  for (const inp of recipe.inputs) {
+    const stack = player.inventario.find((i) => i.itemId === inp.itemId && i.qtd >= inp.qtd);
+    if (!stack) {
+      log.push(`Falta ${inp.itemId} x${inp.qtd}.`);
+      return false;
+    }
+  }
+  // consome
+  for (const inp of recipe.inputs) {
+    const stack = player.inventario.find((i) => i.itemId === inp.itemId);
+    if (stack) {
+      stack.qtd -= inp.qtd;
+    }
+  }
+  player.inventario = player.inventario.filter((i) => i.qtd > 0);
+  // produz
+  for (const out of recipe.outputs) {
+    addToInventory(player, { itemId: out.itemId, qtd: out.qtd });
+    log.push(`Craft: ${out.itemId} x${out.qtd}`);
+  }
+  // marca descoberta
+  if (!player.recipesDescobertas?.includes(recipe.id)) {
+    player.recipesDescobertas = [...(player.recipesDescobertas ?? []), recipe.id];
+    log.push(`Receita registrada: ${recipe.nome}.`);
+  }
+  return true;
 }
 
 function applyConsumable(player: Player, item: ReturnType<typeof fetchItem>, log: string[]) {
@@ -369,7 +639,7 @@ function applyConsumable(player: Player, item: ReturnType<typeof fetchItem>, log
 
 function handleHelp(): string[] {
   return [
-    "Comandos: olhar/look | ir/go <numero/rota> | settarget <id> | inspecionar/inspect <id> | skills | useskill <id> | fugir/flee | status | inventario | loot | equipar <itemId> | usar/use <itemId> | absorver/absorb <essenciaId> | purificar/purge <essenciaId> | mapa/map | passivas | essencias | descanso/rest | starter <skill1> <skill2> <item> | ajuda/help",
+    "Comandos: olhar/look | ir/go <numero/rota> | settarget <id> | inspecionar/inspect <id> | skills | useskill <id> | fugir/flee | status | inventario | loot | equipar <itemId> | usar/use <itemId> | craft <id|help> | pesquisar <item|ambiente> | acao <anomaliaId> <opcao> | catalogo <classes|skills|itens|essencias> | absorver/absorb <essenciaId> | purificar/purge <essenciaId> | mapa/map | passivas | essencias | bestiario | tomo <id> (escolha de level up) | descanso/rest | starter <skill1> <skill2> <item> | ajuda/help",
     "Look revela caminhos, percepcao pode expor rotas secretas.",
     "Attack usa estamina e considera peso. Flee tenta sair rapido.",
     "Use para consumiveis; absorb/purge gerenciam essencias (limitado por slots). Map lista salas visitadas.",
@@ -378,8 +648,135 @@ function handleHelp(): string[] {
   ];
 }
 
+function maybeAutoUnlockReflex(player: Player, log: string[]) {
+  const agil = player.stats.atributos.agilidade;
+  const perc = player.stats.sub.percepcao;
+  if (player.passivas.includes("reflexo_instintivo")) return;
+  if (agil >= 7 && perc >= 3) {
+    player.passivas.push("reflexo_instintivo");
+    log.push("Seus reflexos se aguçam: nova passiva 'Reflexo Instintivo' adquirida.");
+  }
+}
+
+function ensureDynamicArchetypes(player: Player, log: string[]) {
+  const hasTagSkill = (tag: string) => availableSkills(player).some((s) => s.tags?.includes(tag));
+  const unlockSkills = (ids: string[], label: string) => {
+    const newly: string[] = [];
+    ids.forEach((id) => {
+      if (!player.skillsDesbloqueadas?.includes(id)) {
+        player.skillsDesbloqueadas = [...(player.skillsDesbloqueadas ?? []), id];
+        newly.push(id);
+      }
+    });
+    if (newly.length) log.push(`${label}: novas skills ${newly.join(", ")}`);
+  };
+
+  for (const arc of ARCHETYPES) {
+    if (player.arquetipos?.includes(arc.id)) continue;
+    if (arc.linhagem && arc.linhagem !== player.lineage) continue;
+    if (arc.attrsMin) {
+      const okAttr = Object.entries(arc.attrsMin).every(([k, v]) => {
+        // @ts-ignore
+        const val = player.stats.atributos[k] ?? player.stats.sub?.[k];
+        return val !== undefined && val >= (v as number);
+      });
+      if (!okAttr) continue;
+    }
+    if (arc.tagsNecessarias && !arc.tagsNecessarias.every((t) => hasTagSkill(t))) continue;
+    if (arc.equipObrigatorio && !arc.equipObrigatorio.every((eq) => Object.values(player.equipamento).includes(eq))) continue;
+    if (arc.essencias && !arc.essencias.every((e) => player.essencias.includes(e))) continue;
+
+    player.arquetipos = [...(player.arquetipos ?? []), arc.id];
+    if (arc.skillsDesbloqueadas?.length) unlockSkills(arc.skillsDesbloqueadas, `Arquétipo ${arc.nome}`);
+    if (arc.passivas?.length) {
+      arc.passivas.forEach((p) => {
+        if (!player.passivas.includes(p)) player.passivas.push(p);
+      });
+      log.push(`Arquétipo ${arc.nome}: novas passivas ${arc.passivas.join(", ")}`);
+    }
+    if (arc.bonus) {
+      for (const [k, v] of Object.entries(arc.bonus)) {
+        // @ts-ignore
+        player.stats.atributos[k] = (player.stats.atributos[k] || 0) + (v ?? 0);
+      }
+    }
+    if (arc.malus) {
+      for (const [k, v] of Object.entries(arc.malus)) {
+        // @ts-ignore
+        player.stats.atributos[k] = (player.stats.atributos[k] || 0) + (v ?? 0);
+      }
+    }
+    log.push(`Arquétipo desbloqueado: ${arc.nome}.`);
+  }
+
+  // mutações: se encontrar essências gatilho e ainda não tem mutação
+  if (!player.mutacao) {
+    for (const mut of MUTATIONS) {
+      if (mut.gatilhoEssencias && !mut.gatilhoEssencias.every((e) => player.essencias.includes(e))) continue;
+      player.mutacao = mut.id;
+      if (mut.skills) unlockSkills(mut.skills, `Mutacao ${mut.nome}`);
+      if (mut.passivas) {
+        mut.passivas.forEach((p) => {
+          if (!player.passivas.includes(p)) player.passivas.push(p);
+        });
+        log.push(`Mutacao ${mut.nome}: novas passivas ${mut.passivas.join(", ")}`);
+      }
+      if (mut.bonus) {
+        for (const [k, v] of Object.entries(mut.bonus)) {
+          // @ts-ignore
+          player.stats.atributos[k] = (player.stats.atributos[k] || 0) + (v ?? 0);
+        }
+      }
+      if (mut.malus) {
+        for (const [k, v] of Object.entries(mut.malus)) {
+          // @ts-ignore
+          player.stats.atributos[k] = (player.stats.atributos[k] || 0) + (v ?? 0);
+        }
+      }
+      log.push(`Mutacao adquirida: ${mut.nome}.`);
+      break;
+    }
+  }
+}
+
+function dropDungeonEssence(room: Room, roomState: RoomState) {
+  if (room.tipo !== "desafio") return;
+  const already = roomState.loot?.some((l) => l.itemId === "essencia_dungeon");
+  if (already) return;
+  const drop = { itemId: "essencia_dungeon", qtd: 1 } as InventoryItem;
+  roomState.loot = [...(roomState.loot ?? []), drop];
+}
+
+function processMobDeaths(prevAlive: Set<string>, roomState: RoomState, player: Player, log: string[], room: Room) {
+  const newlyDead = roomState.mobs.filter((m) => !m.alive && prevAlive.has(m.id));
+  for (const mobInst of newlyDead) {
+    const mobData = MOBS.find((m) => m.id === mobInst.mobId);
+    log.push(`${mobData?.nome ?? mobInst.mobId} sucumbe ao dano continuo.`);
+    if (mobData && !player.catalogo.mobsDerrotados.includes(mobData.id)) {
+      player.catalogo.mobsDerrotados.push(mobData.id);
+      player.xp += 1;
+      if (!player.catalogo.biomasVisitados.includes(mobData.biome)) {
+        player.catalogo.biomasVisitados.push(mobData.biome);
+      }
+      log.push(`XP +1 por derrubar ${mobData.nome} via efeito continuo. XP total: ${player.xp}`);
+      levelUpIfNeeded(player, log);
+    }
+    const drops = rollDrops(mobData?.dropTable ?? []);
+    if (drops.length) {
+      for (const drop of drops) {
+        addToInventory(player, drop);
+        const itemName = fetchItem(drop.itemId)?.nome ?? drop.itemId;
+        log.push(`Loot: ${itemName} x${drop.qtd}`);
+      }
+    }
+    dropDungeonEssence(room, roomState);
+  }
+}
+
 export async function handleCommand({ command, player, world, room, roomState }: HandleInput): Promise<CommandResult> {
   const log: string[] = [];
+  maybeAutoUnlockReflex(player, log);
+  ensureDynamicArchetypes(player, log);
   const trimmed = (command || "").trim();
   if (!trimmed) {
     return { log: ["Envie um comando: help para lista."], player, room, roomState };
@@ -523,8 +920,41 @@ export async function handleCommand({ command, player, world, room, roomState }:
   }
 
   switch (verb.toLowerCase()) {
+    case "tomo": {
+      if (!player.pendingTomes || player.pendingTomes.length === 0) {
+        log.push("Nenhum tomo pendente. Suba de nivel para receber novas escolhas.");
+        break;
+      }
+      if (!rest.length) {
+        log.push("Use tomo <id>. Opcoes atuais:");
+        player.pendingTomes.forEach((t) => log.push(`${t.id}: ${t.desc}`));
+        break;
+      }
+      const choice = player.pendingTomes.find((t) => t.id === rest[0]);
+      if (!choice) {
+        log.push("Tomo nao encontrado. Veja as opcoes com 'tomo'.");
+        break;
+      }
+      for (const [k, v] of Object.entries(choice.bonus || {})) {
+        // @ts-ignore
+        player.stats.atributos[k] = (player.stats.atributos[k] || 0) + v;
+      }
+      for (const [k, v] of Object.entries(choice.malus || {})) {
+        // @ts-ignore
+        player.stats.atributos[k] = (player.stats.atributos[k] || 0) + v;
+      }
+      // recalcula hp/stamina max
+      player.stats.maxHp = 40 + player.stats.atributos.vigor * 4 + player.stats.atributos.forca;
+      player.stats.maxStamina = 30 + player.stats.atributos.vigor * 2 + player.stats.atributos.mente + player.stats.atributos.foco;
+      if (player.hp > player.stats.maxHp) player.hp = player.stats.maxHp;
+      if (player.stamina > player.stats.maxStamina) player.stamina = player.stats.maxStamina;
+      player.pendingTomes = [];
+      log.push(`Tomo aplicado: ${choice.desc}.`);
+      break;
+    }
     case "look":
     case "where": {
+      ensureAnomaly(room, roomState);
       trackDiscovery(player, room, roomState, log);
       log.push(...maybeRevealSecrets(room, player));
       log.push(...describeRoom(room, player, roomState));
@@ -574,8 +1004,10 @@ export async function handleCommand({ command, player, world, room, roomState }:
       log.push(`Voce segue por ${connLabel} e chega em ${targetConn.nome}.`);
       log.push(...maybeRevealSecrets(targetConn, player));
       trackDiscovery(player, targetConn, null, log);
+      const prevAlive = new Set(roomState.mobs.filter((m) => m.alive).map((m) => m.id));
       const tick = mobActionTick(player, roomState);
       log.push(...tick.log);
+      processMobDeaths(prevAlive, roomState, player, log, room);
       if (player.hp <= 0) {
         handleDeath(player, roomState, world, log);
         return { log, player, room, roomState, world: { salaInicial: world.salaInicial, seed: world.seed, versao: world.versao } };
@@ -591,21 +1023,13 @@ export async function handleCommand({ command, player, world, room, roomState }:
         log.push("Use settarget <indice ou id>");
         break;
       }
-      const arg = rest[0];
-      const visible = roomState.mobs.filter((m) => m.alive);
-      let target = visible.find((m) => m.id === arg);
-      if (!target) {
-        const idx = parseInt(arg, 10);
-        if (!Number.isNaN(idx) && idx > 0 && idx <= visible.length) {
-          target = visible[idx - 1];
-        }
-      }
-      if (!target) {
+      const targetId = resolveTarget(roomState, rest[0]);
+      if (!targetId) {
         log.push("Alvo nao encontrado.");
         break;
       }
-      player.selectedTarget = target.id;
-      log.push(`Alvo selecionado: ${target.id}`);
+      player.selectedTarget = targetId;
+      log.push(`Alvo selecionado: ${targetId}`);
       break;
     }
     case "inspect": {
@@ -613,15 +1037,8 @@ export async function handleCommand({ command, player, world, room, roomState }:
         log.push("Use inspect <indice ou id>");
         break;
       }
-      const arg = rest[0];
-      const visible = roomState.mobs.filter((m) => m.alive);
-      let target = visible.find((m) => m.id === arg);
-      if (!target) {
-        const idx = parseInt(arg, 10);
-        if (!Number.isNaN(idx) && idx > 0 && idx <= visible.length) {
-          target = visible[idx - 1];
-        }
-      }
+      const targetId = resolveTarget(roomState, rest[0]);
+      const target = roomState.mobs.find((m) => m.id === targetId);
       if (!target) {
         log.push("Nao localizado.");
         break;
@@ -647,32 +1064,30 @@ export async function handleCommand({ command, player, world, room, roomState }:
       const skill = availableSkills(player).find(
         (h) => h.id === skillId || h.nome.toLowerCase().includes(skillId.toLowerCase())
       );
-      if (!skill) {
-        log.push("Skill nao encontrada ou indisponivel.");
-        break;
-      }
-      const now = Date.now();
+    if (!skill) {
+      log.push("Skill nao encontrada ou indisponivel.");
+      break;
+    }
+    const now = Date.now();
       const last = player.skillCooldowns?.[skill.id] ?? 0;
       const cd = skill.cooldownMs ?? 0;
-      if (cd > 0 && now - last < cd) {
-        const remain = Math.ceil((cd - (now - last)) / 1000);
-        log.push(`Skill em recarga: ${remain}s restantes.`);
-        break;
-      }
+    if (cd > 0 && now - last < cd) {
+      const remain = Math.ceil((cd - (now - last)) / 1000);
+      log.push(`Skill em recarga: ${remain}s restantes.`);
+      break;
+    }
+    const ammoCheck = consumeAmmo(player, skill.id);
+    if (!ammoCheck.ok) {
+      log.push(`Sem municao (${ammoCheck.ammoId} x${ammoCheck.need ?? 1}). Use craft ${ammoCheck.ammoId} ou encontre mais.`);
+      break;
+    }
       let targetId = player.selectedTarget ?? undefined;
       if (skill.requerAlvo) {
         const targetArg = rest[1];
-        const alive = roomState.mobs.filter((m) => m.alive);
-        if (targetArg) {
-          const foundById = alive.find((m) => m.id === targetArg);
-          const idx = parseInt(targetArg, 10);
-          if (!targetId && foundById) targetId = foundById.id;
-          else if (!targetId && !Number.isNaN(idx) && idx > 0 && idx <= alive.length) {
-            targetId = alive[idx - 1].id;
-          }
-        }
-        if (!targetId && alive.length === 1) {
-          targetId = alive[0].id;
+        const resolved = resolveTarget(roomState, targetArg);
+        if (!targetId && resolved) targetId = resolved;
+        if (!targetId && roomState.mobs.filter((m) => m.alive).length === 1) {
+          targetId = roomState.mobs.find((m) => m.alive)!.id;
           log.push(`Alvo unico encontrado: ${targetId}`);
         }
         if (!targetId) {
@@ -681,6 +1096,7 @@ export async function handleCommand({ command, player, world, room, roomState }:
         }
       }
       if (targetId) player.selectedTarget = targetId;
+      const prevAlive = new Set(roomState.mobs.filter((m) => m.alive).map((m) => m.id));
       const result = performSkill(player, room, roomState, {
         skillId: skill.id,
         skillBase: skill.baseDano,
@@ -709,9 +1125,11 @@ export async function handleCommand({ command, player, world, room, roomState }:
             log.push(`Loot: ${itemName} x${drop.qtd}`);
           }
         }
+        dropDungeonEssence(room, roomState);
       }
       const tick = mobActionTick(player, roomState);
       log.push(...tick.log);
+      processMobDeaths(prevAlive, roomState, player, log, room);
       if (player.hp <= 0) {
         handleDeath(player, roomState, world, log);
         return { log, player, room, roomState, world: { salaInicial: world.salaInicial, seed: world.seed, versao: world.versao } };
@@ -768,6 +1186,53 @@ export async function handleCommand({ command, player, world, room, roomState }:
       log.push(...handleEquipment(player));
       break;
     }
+    case "craft": {
+      if (!rest.length) {
+        log.push("Use craft <id>, craft help ou pesquisar <item>.");
+        break;
+      }
+      if (rest[0] === "help") {
+        const known = player.recipesDescobertas ?? [];
+        if (!known.length) {
+          log.push("Nenhuma receita descoberta ainda. Use pesquisar <item> ou tente combinar materiais.");
+        } else {
+          log.push("Receitas descobertas:");
+          known.forEach((id) => {
+            const r = RECIPES.find((rr) => rr.id === id);
+            if (r) log.push(`${r.id}: ${r.nome} -> ${r.outputs.map((o) => `${o.itemId} x${o.qtd}`).join(", ")}`);
+          });
+        }
+        break;
+      }
+      craftItem(player, rest[0], log);
+      break;
+    }
+    case "acao": {
+      if (rest.length < 2) {
+        log.push("Use acao <anomaliaId> <opcao>. Ex: acao <id> orar/quebrar/guardar/beber/pescar");
+        break;
+      }
+      const [anomId, opcao] = rest;
+      handleAnomalyAction(player, room, roomState, log, anomId, opcao);
+      break;
+    }
+    case "pesquisar": {
+      if (!rest.length) {
+        log.push("Use pesquisar <item> para receber pistas de crafting.");
+        break;
+      }
+      const itemId = rest[0];
+      const hints = RECIPES.filter((r) => r.inputs.some((inp) => inp.itemId === itemId));
+      if (!hints.length) {
+        log.push("Nenhuma pista encontrada para este item.");
+        break;
+      }
+      hints.forEach((r) => {
+        const outros = r.inputs.filter((i) => i.itemId !== itemId);
+        log.push(`Talvez ${itemId} combine com ${outros.map((o) => `${o.itemId} x${o.qtd}`).join(" + ")} para formar algo (${r.outputs.map((o) => o.itemId).join(", ")}).`);
+      });
+      break;
+    }
     case "loot": {
       const loot = roomState.loot ?? [];
       if (!loot.length) {
@@ -776,9 +1241,16 @@ export async function handleCommand({ command, player, world, room, roomState }:
       }
       for (const item of loot) {
         addToInventory(player, item);
+        const meta = fetchItem(item.itemId);
+        if (item.ownerId && item.ownerId === player.id) {
+          log.push(`Voce recupera ${meta?.nome ?? item.itemId} x${item.qtd} que havia deixado aqui.`);
+        } else if (item.ownerId && item.ownerId !== player.id) {
+          log.push(`Voce saqueia ${meta?.nome ?? item.itemId} x${item.qtd} que outro jogador perdeu.`);
+        } else {
+          log.push(`Voce coleta ${meta?.nome ?? item.itemId} x${item.qtd}.`);
+        }
       }
       roomState.loot = [];
-      log.push("Voce coleta o loot espalhado na sala.");
       break;
     }
     case "use": {
@@ -797,17 +1269,37 @@ export async function handleCommand({ command, player, world, room, roomState }:
         log.push("Apenas consumiveis podem ser usados.");
         break;
       }
-      applyConsumable(player, item, log);
+      const prevAlive = new Set(roomState.mobs.filter((m) => m.alive).map((m) => m.id));
+      if (item.id === "essencia_dungeon") {
+        player.masterRoom = room.id;
+        roomState.masterId = player.id;
+        log.push(`Voce reivindica esta sala como mestre da dungeon. (Sala ${room.nome})`);
+      } else {
+        applyConsumable(player, item, log);
+      }
       invItem.qtd -= 1;
       if (invItem.qtd <= 0) {
         player.inventario = player.inventario.filter((i) => i.qtd > 0);
       }
       const tick = mobActionTick(player, roomState);
       log.push(...tick.log);
+      processMobDeaths(prevAlive, roomState, player, log, room);
       if (player.hp <= 0) {
         handleDeath(player, roomState, world, log);
         return { log, player, room, roomState, world: { salaInicial: world.salaInicial, seed: world.seed, versao: world.versao } };
       }
+      break;
+    }
+    case "bestiario": {
+      log.push(...handleBestiary(player));
+      break;
+    }
+    case "catalogo": {
+      if (!rest.length) {
+        log.push("Use catalogo classes|skills|itens|essencias");
+        break;
+      }
+      log.push(...handleCatalogo(rest[0]));
       break;
     }
     case "absorb": {
@@ -901,8 +1393,10 @@ export async function handleCommand({ command, player, world, room, roomState }:
           player.skillsDesbloqueadas = [...(player.skillsDesbloqueadas ?? []), eqSkill.id];
         }
       }
+      const prevAlive = new Set(roomState.mobs.filter((m) => m.alive).map((m) => m.id));
       const tick = mobActionTick(player, roomState);
       log.push(...tick.log);
+      processMobDeaths(prevAlive, roomState, player, log, room);
       if (player.hp <= 0) {
         handleDeath(player, roomState, world, log);
         return { log, player, room, roomState, world: { salaInicial: world.salaInicial, seed: world.seed, versao: world.versao } };
@@ -927,8 +1421,10 @@ export async function handleCommand({ command, player, world, room, roomState }:
       log.push(`Voce descansa. Recupera ${recHp} HP, ${recSta} Estamina e reduz corrupcao (${corrReduce}). Atual: ${player.corrupcao}%.`);
       if (room.tipo !== "santuario" && roomState.mobs.some((m) => m.alive)) {
         log.push("Descansar aqui e arriscado...");
+        const prevAlive = new Set(roomState.mobs.filter((m) => m.alive).map((m) => m.id));
         const tick = mobActionTick(player, roomState);
         log.push(...tick.log);
+        processMobDeaths(prevAlive, roomState, player, log, room);
         if (player.hp <= 0) {
           handleDeath(player, roomState, world, log);
           return { log, player, room, roomState, world: { salaInicial: world.salaInicial, seed: world.seed, versao: world.versao } };

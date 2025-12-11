@@ -162,4 +162,28 @@ export const ITEMS: Item[] = [
     peso: 1,
     efeitos: ["Material para armas ilusorias"],
   },
+  {
+    id: "flecha_bruta",
+    nome: "Flecha Bruta",
+    tipo: "material",
+    raridade: "comum",
+    peso: 0,
+    efeitos: ["Municao simples para tiros de arco/funda."],
+  },
+  {
+    id: "faca_lancavel",
+    nome: "Faca Lancavel",
+    tipo: "material",
+    raridade: "comum",
+    peso: 0,
+    efeitos: ["Municao para arremessos de faca."],
+  },
+  {
+    id: "essencia_dungeon",
+    nome: "Essencia de Dungeon",
+    tipo: "consumivel",
+    raridade: "raro",
+    peso: 0,
+    efeitos: ["Permite reivindicar a sala de chefe como mestre"],
+  },
 ];

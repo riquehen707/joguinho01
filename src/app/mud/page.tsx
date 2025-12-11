@@ -9,6 +9,7 @@ import { BASE_CLASSES } from "@/lib/game/data/classes";
 import { EQUIP_SKILLS } from "@/lib/game/data/equipSkills";
 import { ITEMS } from "@/lib/game/data/items";
 import { SKILLS, getSkill } from "@/lib/game/data/skills";
+import { RECIPES } from "@/lib/game/data/recipes";
 
 type ApiResponse = {
   playerId: string;
@@ -21,7 +22,7 @@ type ApiResponse = {
 };
 
 const storageKey = "mud-player-id";
-type Tab = "log" | "sala" | "inv" | "ess" | "map" | "status" | "chat" | "skills";
+type Tab = "log" | "map" | "status";
 
 export default function MudPage() {
   const [playerId, setPlayerId] = useState<string | null>(null);
@@ -45,6 +46,8 @@ export default function MudPage() {
   const [starterSkillB, setStarterSkillB] = useState<string>("");
   const [starterItem, setStarterItem] = useState<string>("");
   const [skillModalOpen, setSkillModalOpen] = useState(false);
+  const [consumableModalOpen, setConsumableModalOpen] = useState(false);
+  const [craftModalOpen, setCraftModalOpen] = useState(false);
 
   useEffect(() => {
     const saved = typeof window !== "undefined" ? localStorage.getItem(storageKey) : null;
@@ -141,20 +144,28 @@ export default function MudPage() {
   const showIdentityPicker = useMemo(() => player && !player.lockedIdentity, [player]);
   const showStarterPicker = useMemo(() => player && player.starterEscolhido === false, [player]);
 
-  const starterSkills = useMemo(() => SKILLS.filter((s) => s.starterPool), []);
+  const starterSkills = useMemo(() => {
+    const equipIds = new Set(Object.values(EQUIP_SKILLS).map((s) => s.id));
+    return SKILLS.filter((s) => s.starterPool && !equipIds.has(s.id));
+  }, []);
   const starterItems = useMemo(() => ITEMS.filter((i) => i.starter && i.tipo !== "material" && i.tipo !== "consumivel"), []);
 
+  const visibleLogs = useMemo(() => logs.slice(-80), [logs]);
+
   return (
-    <main
-      style={{
-        minHeight: "100vh",
-        display: "flex",
-        flexDirection: "column",
-        padding: "12px",
-        gap: "12px",
-        background: "#0c0c12",
-      }}
-    >
+    <>
+      <main
+        style={{
+          minHeight: "100vh",
+          display: "flex",
+          flexDirection: "column",
+          padding: "12px",
+          gap: "12px",
+          background: "#0c0c12",
+          maxWidth: 1200,
+          margin: "0 auto",
+        }}
+      >
       <header
         style={{
           display: "flex",
@@ -171,23 +182,14 @@ export default function MudPage() {
           <span style={{ color: "#8da1b9" }}>{statusLine}</span>
         </div>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-          <button disabled={busy} onClick={() => quick("look")} style={btnStyle}>
-            Look
-          </button>
-          <button disabled={busy} onClick={() => quick("map")} style={btnStyleSecondary}>
-            Map
-          </button>
-          <button disabled={busy} onClick={() => quick("inventory")} style={btnStyleSecondary}>
-            Inventario
-          </button>
-          <button disabled={busy} onClick={() => setSkillModalOpen(true)} style={btnStyleSecondary}>
+          <button disabled={busy} onClick={() => setSkillModalOpen(true)} style={btnStyle}>
             Usar Habilidade
           </button>
-          <button disabled={busy} onClick={() => quick("rest")} style={btnStyleSecondary}>
-            Rest
+          <button disabled={busy} onClick={() => setConsumableModalOpen(true)} style={btnStyleSecondary}>
+            Usar Consumivel
           </button>
-          <button disabled={busy} onClick={() => quick("help")} style={btnStyleSecondary}>
-            Help
+          <button disabled={busy} onClick={() => setCraftModalOpen(true)} style={btnStyleSecondary}>
+            Craftar
           </button>
         </div>
       </header>
@@ -195,33 +197,41 @@ export default function MudPage() {
       <section style={{ ...panelStyle, padding: 0 }}>
         <div style={{ display: "flex", borderBottom: "1px solid #242434" }}>
           <TabButton active={tab === "log"} onClick={() => setTab("log")} label="Log" />
-          <TabButton active={tab === "sala"} onClick={() => setTab("sala")} label="Sala" />
+          <TabButton active={tab === "map"} onClick={() => setTab("map")} label="Mapa/Sala" />
           <TabButton active={tab === "status"} onClick={() => setTab("status")} label="Status" />
-          <TabButton active={tab === "inv"} onClick={() => setTab("inv")} label="Inventario" />
-          <TabButton active={tab === "ess"} onClick={() => setTab("ess")} label="Essencias" />
-          <TabButton active={tab === "map"} onClick={() => setTab("map")} label="Mapa" />
-          <TabButton active={tab === "skills"} onClick={() => setTab("skills")} label="Skills" />
-          <TabButton active={tab === "chat"} onClick={() => setTab("chat")} label="Chat" />
         </div>
         <div style={{ padding: 12 }}>
           {tab === "log" && (
-            <div style={{ maxHeight: "48vh", overflowY: "auto", display: "flex", flexDirection: "column", gap: 6 }}>
-              {logs.map((line, idx) => (
-                <div key={idx} style={{ background: "#0f1118", padding: "8px 10px", borderRadius: 8, border: "1px solid #1f2432" }}>
-                  {line}
-                </div>
-              ))}
+            <div style={{ maxHeight: "52vh", overflowY: "auto", display: "flex", flexDirection: "column", gap: 6 }}>
+              {[...visibleLogs].reverse().map((line, idx) => {
+                const { color, label } = lineStyle(line);
+                return (
+                  <div
+                    key={idx}
+                    style={{
+                      background: "linear-gradient(135deg, #0f1118, #0d1018)",
+                      padding: "10px 12px",
+                      borderRadius: 10,
+                      border: "1px solid #1f2432",
+                      color,
+                    }}
+                  >
+                    {label ? <strong style={{ marginRight: 6 }}>{label}</strong> : null}
+                    {line}
+                  </div>
+                );
+              })}
             </div>
           )}
-          {tab === "sala" && (
-            <>
+          {tab === "map" && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 8, color: "#c4d0dd" }}>
               {room ? (
-                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                <>
                   <div style={{ fontWeight: 600 }}>{room.nome}</div>
                   <div style={{ color: "#9fb2c8" }}>
                     Bioma: {room.biome} | Tipo: {room.tipo} | Dificuldade: {room.dificuldade}
                   </div>
-                  <div style={{ color: "#c4d0dd" }}>Caminhos: {room.conexoes.length}</div>
+                  <div style={{ color: "#c4d0dd" }}>Conexoes visiveis: {room.conexoes.length}</div>
                   <div style={{ color: "#c4d0dd" }}>
                     Mobs:{" "}
                     {roomState && roomState.mobs.length
@@ -231,7 +241,7 @@ export default function MudPage() {
                       : "Nenhum"}
                   </div>
                   <div style={{ color: "#c4d0dd" }}>
-                    Jogadores:{' '}
+                    Jogadores:{" "}
                     {presence.length
                       ? presence
                           .filter((p) => p.id !== player?.id)
@@ -239,45 +249,19 @@ export default function MudPage() {
                           .join(", ") || "apenas voce"
                       : "apenas voce"}
                   </div>
-                </div>
+                  <div style={{ color: "#c4d0dd" }}>
+                    Salas visitadas: {player?.visitados?.length ?? 0} | Atual: {player?.localizacao ?? room.id}
+                  </div>
+                </>
               ) : (
                 <div>Nenhuma sala carregada.</div>
               )}
-            </>
-          )}
-          {tab === "inv" && (
-            <div style={{ display: "flex", flexDirection: "column", gap: 8, color: "#c4d0dd" }}>
-              {player?.inventario?.length
-                ? player.inventario.map((i) => {
-                    const meta = ITEMS.find((it) => it.id === i.itemId);
-                    const label = meta ? `${meta.nome} (${meta.tipo}/${meta.raridade})` : i.itemId;
-                    const efeitos = meta?.efeitos?.join("; ") ?? "desconhecido";
-                    return (
-                      <div key={i.itemId} style={{ display: "flex", flexDirection: "column", gap: 4, border: "1px solid #1f2432", borderRadius: 8, padding: "6px 8px" }}>
-                        <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "center" }}>
-                          <span>
-                            {label} x{i.qtd} | Peso {meta?.peso ?? "?"}
-                          </span>
-                          <div style={{ display: "flex", gap: 6 }}>
-                            <button disabled={busy} style={btnStyleSecondary} onClick={() => quick(`use ${i.itemId}`)}>
-                              Usar
-                            </button>
-                            <button disabled={busy} style={btnStyleSecondary} onClick={() => quick(`equip ${i.itemId}`)}>
-                              Equipar
-                            </button>
-                          </div>
-                        </div>
-                        <div style={{ color: "#9fb2c8", fontSize: 13 }}>Efeitos: {efeitos}</div>
-                      </div>
-                    );
-                  })
-                : "Inventario vazio."}
             </div>
           )}
           {tab === "status" && player && (
             <div style={{ display: "flex", flexDirection: "column", gap: 10, color: "#c4d0dd" }}>
               <div>
-                Classe: {player.classeBase} | Raca: {player.race} | Linhagem: {player.lineage}
+                Classe base: {player.classeBase} | Arquétipos: {player.arquetipos?.join(", ") || "nenhum"} | Mutação: {player.mutacao ?? "nenhuma"}
               </div>
               <div>
                 HP: {player.hp}/{player.stats.maxHp} | STA: {player.stamina}/{player.stats.maxStamina} | Escudo: {player.status?.shield ?? 0} | Drone:{" "}
@@ -285,66 +269,58 @@ export default function MudPage() {
               </div>
               <div>Corrupcao: {player.corrupcao}% | Ouro: {player.ouro}</div>
               <div>Passivas: {player.passivas.join(", ") || "nenhuma"}</div>
-              <div>Essencias: {player.essencias.join(", ") || "nenhuma"}</div>
-              <div>Skills: {player.skillsDesbloqueadas?.join(", ") || "use skills para listar"}</div>
-            </div>
-          )}
-          {tab === "ess" && (
-            <div style={{ display: "flex", flexDirection: "column", gap: 8, color: "#c4d0dd" }}>
               <div>
-                Slots: {player?.essencias.length ?? 0} / {player?.slotsEssencia ?? 0}
-              </div>
-              <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                {player?.essencias.length
+                Essencias ({player.essencias.length}/{player.slotsEssencia}):{" "}
+                {player.essencias.length
                   ? player.essencias.map((id) => (
-                      <div key={id} style={{ padding: "6px 8px", borderRadius: 8, background: "#0f1118", border: "1px solid #1f2432" }}>
-                        {id}
+                      <span key={id} style={{ marginRight: 6 }}>
+                        {id}{" "}
                         <button
                           disabled={busy}
-                          style={{ ...btnStyleSecondary, marginLeft: 6, padding: "4px 6px" }}
+                          style={{ ...btnStyleSecondary, padding: "3px 6px" }}
                           onClick={() => quick(`purge ${id}`)}
                         >
                           Purge
                         </button>
-                      </div>
+                      </span>
                     ))
-                  : "Nenhuma ativa. Use 'absorb <id>'."}
+                  : "nenhuma (use absorb <id>)"}
               </div>
-              <div>Passivas: {player?.passivas.join(", ") || "nenhuma"}</div>
-              <div>Target: {player?.selectedTarget ?? "nenhum"}</div>
               <div>
-                Escudo: {player?.status?.shield ?? 0} | Drone: {player?.status?.droneCharges ?? 0}
+                Municao: flechas {player.inventario.find((i) => i.itemId === "flecha_bruta")?.qtd ?? 0} | facas{" "}
+                {player.inventario.find((i) => i.itemId === "faca_lancavel")?.qtd ?? 0}
               </div>
-            </div>
-          )}
-          {tab === "skills" && (
-            <div style={{ display: "flex", flexDirection: "column", gap: 8, color: "#c4d0dd" }}>
-              <div>Use o comando skills no terminal ou escolha uma skill abaixo:</div>
-              <SkillsList player={player} busy={busy} quick={quick} now={now} />
-            </div>
-          )}
-          {tab === "map" && (
-            <div style={{ display: "flex", flexDirection: "column", gap: 6, color: "#c4d0dd" }}>
-              <div>Salas visitadas: {player?.visitados?.length ?? 0}</div>
-              <div style={{ maxHeight: "24vh", overflowY: "auto" }}>
-                {player?.visitados?.length
-                  ? player.visitados.slice(-20).map((s) => <div key={s}>{s}</div>)
-                  : "Nenhuma sala registrada."}
+              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                <div style={{ fontWeight: 600 }}>Skills</div>
+                <SkillsList player={player} busy={busy} quick={quick} now={now} />
               </div>
-              <div>Ultima morte: {player?.ultimaMorte ?? "nenhuma"}</div>
-              <div>
-                Saidas:{" "}
-                {room?.conexoes
-                  ?.map((c) => `${c.label} -> ${c.target}${player?.visitados?.includes(c.target) ? " (visitada)" : ""}`)
-                  .join(" | ") || "N/A"}
-              </div>
-            </div>
-          )}
-          {tab === "chat" && (
-            <div style={{ display: "flex", flexDirection: "column", gap: 6, color: "#c4d0dd" }}>
-              <div style={{ fontWeight: 600 }}>Chat Global (use comando: chat &lt;mensagem&gt;)</div>
-              <div style={{ maxHeight: "30vh", overflowY: "auto", display: "flex", flexDirection: "column", gap: 4 }}>
-                {chatLog.length ? chatLog.map((m, idx) => <div key={idx}>{m}</div>) : <div>Nenhuma mensagem.</div>}
+              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                <div style={{ fontWeight: 600 }}>Inventario</div>
+                {player.inventario.length
+                  ? player.inventario.map((i) => {
+                      const meta = ITEMS.find((it) => it.id === i.itemId);
+                      const label = meta ? `${meta.nome} (${meta.tipo}/${meta.raridade})` : i.itemId;
+                      const efeitos = meta?.efeitos?.join("; ") ?? "desconhecido";
+                      return (
+                        <div key={i.itemId} style={{ display: "flex", flexDirection: "column", gap: 4, border: "1px solid #1f2432", borderRadius: 8, padding: "6px 8px" }}>
+                          <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "center" }}>
+                            <span>
+                              {label} x{i.qtd} | Peso {meta?.peso ?? "?"}
+                            </span>
+                            <div style={{ display: "flex", gap: 6 }}>
+                              <button disabled={busy} style={btnStyleSecondary} onClick={() => quick(`use ${i.itemId}`)}>
+                                Usar
+                              </button>
+                              <button disabled={busy} style={btnStyleSecondary} onClick={() => quick(`equip ${i.itemId}`)}>
+                                Equipar
+                              </button>
+                            </div>
+                          </div>
+                          <div style={{ color: "#9fb2c8", fontSize: 13 }}>Efeitos: {efeitos}</div>
+                        </div>
+                      );
+                    })
+                  : "Inventario vazio."}
               </div>
             </div>
           )}
@@ -535,32 +511,160 @@ export default function MudPage() {
                 Fechar
               </button>
             </div>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 8 }}>
-              {player
-                ? resolveAvailableSkills(player).map((s) => (
-                    <div key={s.id} style={{ border: "1px solid #1f2432", borderRadius: 10, padding: 10, background: "#0f1118", display: "flex", flexDirection: "column", gap: 6 }}>
-                      <div style={{ fontWeight: 600 }}>{s.nome}</div>
-                      <div style={{ fontSize: 12, color: "#9fb2c8" }}>{s.tags?.join(", ") || "sem tags"}</div>
-                      <div style={{ fontSize: 13 }}>{s.descricao}</div>
-                      <div style={{ fontSize: 12, color: "#9fb2c8" }}>
-                        STA {s.custoStamina} | CD {s.cooldownMs ? `${Math.ceil(s.cooldownMs / 1000)}s` : "—"}
-                      </div>
-                      {s.aplica?.length ? (
-                        <div style={{ fontSize: 12, color: "#c499f7" }}>
-                          Aplica: {s.aplica.map((a) => `${a.efeito}(${a.duracao})${a.chance ? ` ${Math.round(a.chance * 100)}%` : ""}`).join(", ")}
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 10 }}>
+                  {player
+                    ? resolveAvailableSkills(player).map((s) => {
+                        const last = player.skillCooldowns?.[s.id] ?? 0;
+                        const cdLeft = s.cooldownMs ? Math.max(0, Math.ceil((s.cooldownMs - (now - last)) / 1000)) : 0;
+                        const tags = s.tags?.length ? s.tags : ["sem tags"];
+                        const escalaStr = Object.entries(s.escala || {})
+                          .map(([k, v]) => `${k.toUpperCase()}:${v}`)
+                          .join(" | ");
+                        return (
+                          <div
+                            key={s.id}
+                            style={{
+                              border: "1px solid #1f2432",
+                          borderRadius: 10,
+                          padding: 12,
+                          background: "linear-gradient(135deg, #0f1118, #0d1018)",
+                          display: "flex",
+                          flexDirection: "column",
+                          gap: 6,
+                        }}
+                      >
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 6 }}>
+                          <div style={{ fontWeight: 700 }}>{s.nome}</div>
+                          <span style={{ fontSize: 11, padding: "3px 8px", borderRadius: 999, background: "#1f2432", color: "#9fb2c8" }}>
+                            {s.categoria ?? "geral"} / {s.raridade ?? "comum"}
+                          </span>
                         </div>
-                      ) : null}
-                      <button disabled={busy} style={btnStyleSecondary} onClick={() => quick(`useskill ${s.id}`)}>
-                        Usar
-                      </button>
-                    </div>
-                  ))
+                        <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+                          {tags.map((t) => (
+                            <span key={t} style={{ fontSize: 11, padding: "3px 6px", borderRadius: 8, background: "#161b26", color: "#c4d0dd" }}>
+                              {t}
+                            </span>
+                          ))}
+                        </div>
+                            <div style={{ fontSize: 13 }}>{s.descricao}</div>
+                            <div style={{ fontSize: 12, color: "#c4d0dd" }}>Dano base: {s.baseDano[0]} - {s.baseDano[1]}</div>
+                            {escalaStr ? <div style={{ fontSize: 11, color: "#9fb2c8" }}>Escala: {escalaStr}</div> : null}
+                            <div style={{ fontSize: 12, color: "#9fb2c8" }}>
+                              STA {s.custoStamina} | CD {s.cooldownMs ? `${Math.ceil(s.cooldownMs / 1000)}s` : "0s"} {cdLeft > 0 ? `(restam ${cdLeft}s)` : ""}
+                            </div>
+                        {s.aplica?.length ? (
+                          <div style={{ fontSize: 12, color: "#c499f7" }}>
+                            Aplica: {s.aplica.map((a) => `${a.efeito}(${a.duracao})${a.chance ? ` ${Math.round(a.chance * 100)}%` : ""}`).join(", ")}
+                          </div>
+                        ) : null}
+                        <button disabled={busy || cdLeft > 0} style={btnStyleSecondary} onClick={() => quick(`useskill ${s.id}`)}>
+                          {cdLeft > 0 ? `Recarga ${cdLeft}s` : "Usar"}
+                        </button>
+                      </div>
+                    );
+                  })
                 : "Carregando..."}
             </div>
           </div>
         </div>
       )}
-    </main>
+      </main>
+      {consumableModalOpen && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.7)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: 16,
+            zIndex: 18,
+          }}
+        >
+          <div style={{ background: "#12121a", padding: 16, borderRadius: 12, border: "1px solid #242434", maxWidth: 620, width: "100%", color: "#cfd1d6" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+              <h3 style={{ margin: 0 }}>Usar consumível</h3>
+              <button style={btnStyleSecondary} onClick={() => setConsumableModalOpen(false)}>
+                Fechar
+              </button>
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 8 }}>
+              {player && player.inventario.filter((i) => ITEMS.find((it) => it.id === i.itemId)?.tipo === "consumivel").length
+                ? player.inventario
+                    .filter((i) => ITEMS.find((it) => it.id === i.itemId)?.tipo === "consumivel")
+                    .map((slot) => {
+                      const meta = ITEMS.find((it) => it.id === slot.itemId);
+                      if (!meta) return null;
+                      return (
+                        <div key={slot.itemId} style={{ border: "1px solid #1f2432", borderRadius: 10, padding: 10, background: "#0f1118", display: "flex", flexDirection: "column", gap: 6 }}>
+                          <div style={{ display: "flex", justifyContent: "space-between", gap: 6 }}>
+                            <div style={{ fontWeight: 700 }}>{meta.nome}</div>
+                            <span style={{ fontSize: 11, padding: "3px 8px", borderRadius: 999, background: "#1f2432", color: "#9fb2c8" }}>
+                              {meta.raridade}
+                            </span>
+                          </div>
+                          <div style={{ fontSize: 12, color: "#9fb2c8" }}>{meta.efeitos?.join("; ")}</div>
+                          <div style={{ fontSize: 12, color: "#c4d0dd" }}>Quantidade: {slot.qtd}</div>
+                          <button disabled={busy} style={btnStyleSecondary} onClick={() => quick(`use ${slot.itemId}`)}>
+                            Usar
+                          </button>
+                        </div>
+                      );
+                    })
+                : "Nenhum consumível disponível."}
+            </div>
+          </div>
+        </div>
+      )}
+      {craftModalOpen && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.7)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: 16,
+            zIndex: 18,
+          }}
+        >
+          <div style={{ background: "#12121a", padding: 16, borderRadius: 12, border: "1px solid #242434", maxWidth: 720, width: "100%", color: "#cfd1d6" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+              <h3 style={{ margin: 0 }}>Crafting</h3>
+              <button style={btnStyleSecondary} onClick={() => setCraftModalOpen(false)}>
+                Fechar
+              </button>
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 10 }}>
+              {player
+                ? RECIPES.filter((r) => player.recipesDescobertas?.includes(r.id)).map((r) => {
+                    const canCraft = r.inputs.every((inp) => (player.inventario.find((i) => i.itemId === inp.itemId)?.qtd ?? 0) >= inp.qtd);
+                    return (
+                      <div key={r.id} style={{ border: "1px solid #1f2432", borderRadius: 10, padding: 12, background: "#0f1118", display: "flex", flexDirection: "column", gap: 6 }}>
+                        <div style={{ fontWeight: 700 }}>{r.nome}</div>
+                        <div style={{ fontSize: 12, color: "#9fb2c8" }}>{r.descricao}</div>
+                        <div style={{ fontSize: 12, color: "#c4d0dd" }}>
+                          Inputs: {r.inputs.map((i) => `${i.itemId} x${i.qtd}`).join(" + ")}
+                        </div>
+                        <div style={{ fontSize: 12, color: "#c4d0dd" }}>
+                          Output: {r.outputs.map((o) => `${o.itemId} x${o.qtd}`).join(", ")}
+                        </div>
+                        <button disabled={busy || !canCraft} style={btnStyleSecondary} onClick={() => quick(`craft ${r.id}`)}>
+                          {canCraft ? "Craftar" : "Falta material"}
+                        </button>
+                      </div>
+                    );
+                  })
+                : "Carregando..."}
+              {!player?.recipesDescobertas?.length && <div>Nenhuma receita descoberta. Use pesquisar & craft para registrar.</div>}
+            </div>
+          </div>
+        </div>
+      )}
+      <style jsx global>{globalStyles}</style>
+    </>
   );
 }
 
@@ -618,6 +722,13 @@ const selectStyle: React.CSSProperties = {
   color: "#f5f6fb",
 };
 
+// Ajuste leve de layout responsivo sem depender de classes globais externas
+const globalStyles = `
+  @media (min-width: 1024px) {
+    main { gap: 14px; }
+  }
+`;
+
 function resolveAvailableSkills(player: Player): Skill[] {
   const classe = BASE_CLASSES.find((c) => c.id === player.classeBase);
   const classSkills = (classe?.habilidades ?? []).map((id) => getSkill(id)).filter(Boolean) as Skill[];
@@ -629,7 +740,16 @@ function resolveAvailableSkills(player: Player): Skill[] {
   }
   const unlocked = new Set(player.skillsDesbloqueadas ?? []);
   const all = [...classSkills, ...equipSkills];
-  return all.filter((s) => unlocked.has(s.id) || equipSkills.some((eq) => eq.id === s.id));
+  const uniq: Skill[] = [];
+  const seen = new Set<string>();
+  for (const s of all) {
+    if (seen.has(s.id)) continue;
+    seen.add(s.id);
+    if (unlocked.has(s.id) || equipSkills.some((eq) => eq.id === s.id)) {
+      uniq.push(s);
+    }
+  }
+  return uniq;
 }
 
 function SkillsList({ player, busy, quick, now }: { player: Player | null; busy: boolean; quick: (cmd: string) => void; now: number }) {
@@ -654,4 +774,13 @@ function SkillsList({ player, busy, quick, now }: { player: Player | null; busy:
       })}
     </div>
   );
+}
+
+function lineStyle(line: string): { color: string; label?: string } {
+  if (line.startsWith("[GLOBAL")) return { color: "#9fffe0", label: "CHAT" };
+  if (line.toLowerCase().includes("xp +")) return { color: "#b4ff91" };
+  if (line.toLowerCase().includes("loot")) return { color: "#c7b8ff" };
+  if (line.toLowerCase().includes("perigo") || line.toLowerCase().includes("risco")) return { color: "#ffb347" };
+  if (line.toLowerCase().includes("voce cai") || line.toLowerCase().includes("morte")) return { color: "#ff8a80" };
+  return { color: "#dfe7f3" };
 }

@@ -45,6 +45,7 @@ export interface Item {
 export interface InventoryItem {
   itemId: string;
   qtd: number;
+  ownerId?: string; // quem dropou, para log de recuperar/roubo
 }
 
 export interface CatalogProgress {
@@ -198,6 +199,11 @@ export interface Player {
   ultimaMorte?: string | null;
   starterEscolhido?: boolean;
   conditions?: Record<StatusId, number>;
+  masterRoom?: string | null; // sala da qual é mestre (essencia de dungeon)
+  pendingTomes?: TomeOption[]; // escolhas de tomo ao upar
+  recipesDescobertas?: string[]; // ids de receitas de craft que o jogador já conhece
+  arquetipos?: string[]; // arquétipos dinâmicos ativos
+  mutacao?: string | null; // mutação ativa
 }
 
 export interface MobInstance {
@@ -207,6 +213,8 @@ export interface MobInstance {
   alive: boolean;
   power?: number; // bonus por equipar loot de jogador
   conditions?: Record<StatusId, number>;
+  invocadorId?: string; // se for uma invocacao do jogador
+  tags?: string[]; // ex: "voador", "furtivo"
 }
 
 export interface RoomState {
@@ -215,6 +223,8 @@ export interface RoomState {
   lastUpdated: number;
   loot?: InventoryItem[];
   deathCount?: number;
+  masterId?: string | null; // jogador que reivindicou a sala
+  anomalies?: Anomaly[];
 }
 
 export interface Skill {
@@ -224,6 +234,7 @@ export interface Skill {
   custoStamina: number;
   baseDano: [number, number];
   escala: Partial<Record<Attribute, number>>; // multiplicador por atributo
+  alcance?: "corpo" | "distancia";
   tags?: string[];
   requerAlvo?: boolean;
   cooldownMs?: number;
@@ -241,7 +252,63 @@ export interface Skill {
     duracao: number;
     chance?: number; // 0-1
     alvo?: "alvo" | "self";
-  }>;
+  }>; 
+}
+
+export interface TomeOption {
+  id: string;
+  bonus: Partial<Record<Attribute, number>>;
+  malus?: Partial<Record<Attribute, number>>;
+  desc: string;
+}
+
+export interface RecipeInput {
+  itemId: string;
+  qtd: number;
+}
+
+export interface Recipe {
+  id: string;
+  nome: string;
+  descricao: string;
+  inputs: RecipeInput[];
+  outputs: RecipeInput[];
+  requisitoPassiva?: string; // opcional
+  requisitoLinhagem?: LineageId; // opcional
+}
+
+export type AnomalyType = "estatua_deusa" | "parasita_abissal" | "rio_misterioso";
+
+export interface Anomaly {
+  id: string;
+  tipo: AnomalyType;
+  resolvida?: boolean;
+  pistas?: string[];
+}
+
+export interface Archetype {
+  id: string;
+  nome: string;
+  tagsNecessarias?: string[]; // tags de skill
+  equipObrigatorio?: string[]; // itemIds
+  essencias?: string[];
+  linhagem?: LineageId;
+  attrsMin?: Partial<Record<Attribute, number>>;
+  skillsDesbloqueadas?: string[];
+  passivas?: string[];
+  bonus?: Partial<Record<Attribute, number>>;
+  malus?: Partial<Record<Attribute, number>>;
+}
+
+export interface Mutation {
+  id: string;
+  nome: string;
+  descricao: string;
+  gatilhoEssencias?: string[];
+  skills?: string[];
+  passivas?: string[];
+  bonus?: Partial<Record<Attribute, number>>;
+  malus?: Partial<Record<Attribute, number>>;
 }
 
 export type StatusId =
