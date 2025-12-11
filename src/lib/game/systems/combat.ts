@@ -162,13 +162,11 @@ function tickConditionsOnPlayer(player: Player, log: string[]) {
 }
 
 export function performAttack(player: Player, room: Room, roomState: RoomState) {
-  const log: string[] = [];
   return performSkill(player, room, roomState, {
     skillId: "ataque_basico",
     skillBase: [4, 8],
     skillCost: undefined,
     targetId: player.selectedTarget ?? undefined,
-    log,
   });
 }
 
