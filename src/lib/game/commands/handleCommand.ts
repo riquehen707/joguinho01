@@ -869,7 +869,7 @@ export async function handleCommand({ command, player, world, room, roomState }:
         break;
       }
       const targetId = rest[0];
-      const item = ITEMS.find((it) => it.id === targetId);
+      const item = ITEM_CATALOG.find((it) => it.id === targetId);
       if (!item) {
         log.push("Item nao encontrado.");
         break;
