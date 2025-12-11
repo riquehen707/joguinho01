@@ -174,7 +174,7 @@ function ensureDefaults(player: Player): Player {
   const patched = { ...player };
   if (patched.hp === undefined || patched.hp === null) patched.hp = patched.stats.maxHp;
   if (patched.stamina === undefined || patched.stamina === null) patched.stamina = patched.stats.maxStamina;
-  if (!patched.inventario) patched.inventario = seedInventory();
+  if (!patched.inventario) patched.inventario = seedInventory(null);
   if (!patched.equipamento) patched.equipamento = {};
   if (!patched.passivas) patched.passivas = [];
   if (!patched.essencias) patched.essencias = [];
