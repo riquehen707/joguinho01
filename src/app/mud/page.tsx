@@ -28,7 +28,10 @@ export default function MudPage() {
   const [player, setPlayer] = useState<Player | null>(null);
   const [room, setRoom] = useState<Room | null>(null);
   const [roomState, setRoomState] = useState<RoomState | null>(null);
-  const [logs, setLogs] = useState<string[]>(["Bem-vindo ao MUD persistente."]);
+  const [logs, setLogs] = useState<string[]>([
+    "Bem-vindo ao Joguinho Daora (beta) — terra de OOO!",
+    "Escolha identidade/starter, explore salas, use comandos em texto. Dê feedback/sugestoes conforme testa.",
+  ]);
   const [chatLog, setChatLog] = useState<string[]>([]);
   const [presence, setPresence] = useState<{ id: string; nome: string }[]>([]);
   const [input, setInput] = useState("");
@@ -148,7 +151,7 @@ export default function MudPage() {
         }}
       >
         <div style={{ display: "flex", justifyContent: "space-between", gap: 8, flexWrap: "wrap" }}>
-          <h1 style={{ margin: 0, fontSize: 20 }}>MUD Roguelike</h1>
+          <h1 style={{ margin: 0, fontSize: 20 }}>Joguinho Daora</h1>
           <span style={{ color: "#8da1b9" }}>{statusLine}</span>
         </div>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
